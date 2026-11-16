@@ -1,23 +1,23 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { EigenFluxStreamClient, type PmStreamEvent } from './stream-client';
+import { AliceRealmStreamClient, type PmStreamEvent } from './stream-client';
 import { Logger } from './logger';
 
 test('the stream child does not report an inherited Gateway model for another Agent', async () => {
-  const home = mkdtempSync(join(tmpdir(), 'eigenflux-stream-model-'));
-  const bin = join(home, 'eigenflux');
-  const inherited = process.env.EIGENFLUX_MODEL;
-  process.env.EIGENFLUX_MODEL = 'unrelated-gateway-model';
+  const home = mkdtempSync(join(tmpdir(), 'alicerealm-stream-model-'));
+  const bin = join(home, 'alicerealm');
+  const inherited = process.env.ALICEREALM_MODEL;
+  process.env.ALICEREALM_MODEL = 'unrelated-gateway-model';
   writeFileSync(bin, `#!${process.execPath}
-console.log(JSON.stringify({type:'test',data:{model:process.env.EIGENFLUX_MODEL || null}}));
+console.log(JSON.stringify({type:'test',data:{model:process.env.ALICEREALM_MODEL || null}}));
 setInterval(() => {}, 1000);
 `, { mode: 0o700 });
   let deliver!: (event: PmStreamEvent) => void;
   const delivered = new Promise<PmStreamEvent>(resolve => { deliver = resolve; });
   let timeout: NodeJS.Timeout | undefined;
-  const client = new EigenFluxStreamClient({
-    serverName: 'owned-server', eigenfluxBin: bin,
+  const client = new AliceRealmStreamClient({
+    serverName: 'owned-server', alicerealmBin: bin,
     logger: new Logger({ info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() }),
     onPmEvent: async event => { deliver(event); }, onAuthRequired: async () => {},
   });
@@ -27,18 +27,18 @@ setInterval(() => {}, 1000);
       timeout = setTimeout(() => reject(new Error('stream child did not respond')), 3000);
     })]);
     expect(event.data.model).toBeNull();
-    expect(process.env.EIGENFLUX_MODEL).toBe('unrelated-gateway-model');
+    expect(process.env.ALICEREALM_MODEL).toBe('unrelated-gateway-model');
   } finally {
     clearTimeout(timeout);
     await client.stop();
-    if (inherited === undefined) delete process.env.EIGENFLUX_MODEL; else process.env.EIGENFLUX_MODEL = inherited;
+    if (inherited === undefined) delete process.env.ALICEREALM_MODEL; else process.env.ALICEREALM_MODEL = inherited;
     rmSync(home, { recursive: true, force: true });
   }
 });
 
 test('order notification pagination cannot overwrite the PM reconnect cursor', async () => {
   const onPmEvent = jest.fn().mockResolvedValue(undefined);
-  const client = new EigenFluxStreamClient({ serverName: 'test', eigenfluxBin: 'unused',
+  const client = new AliceRealmStreamClient({ serverName: 'test', alicerealmBin: 'unused',
     logger: new Logger({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
     onPmEvent, onAuthRequired: async () => {},
   });
@@ -51,10 +51,10 @@ test('order notification pagination cannot overwrite the PM reconnect cursor', a
 });
 
 test('an auth exit forwards the final CLI owner action after stderr drainage with a bounded tail', async () => {
-  const home = mkdtempSync(join(tmpdir(), 'eigenflux-stream-auth-'));
-  const bin = join(home, 'eigenflux');
+  const home = mkdtempSync(join(tmpdir(), 'alicerealm-stream-auth-'));
+  const bin = join(home, 'alicerealm');
   const notice = JSON.stringify({ schema_version: 'eigenflux_auth_required.v1',
-    code: 'REFRESH_INVALID', owner_action: '请回复“恢复当前 EigenFlux 账号”。' });
+    code: 'REFRESH_INVALID', owner_action: '请回复“恢复当前 AliceRealm 账号”。' });
   writeFileSync(bin, `#!${process.execPath}
 process.stderr.write('earlier-diagnostic:' + 'x'.repeat(20000), () => {
   const notice = Buffer.from('\\n' + ${JSON.stringify(notice)} + '\\n');
@@ -67,8 +67,8 @@ process.stderr.write('earlier-diagnostic:' + 'x'.repeat(20000), () => {
   let receive!: (detail?: string) => void;
   const received = new Promise<string | undefined>(resolve => { receive = resolve; });
   let timeout: NodeJS.Timeout | undefined;
-  const client = new EigenFluxStreamClient({
-    serverName: 'owned-server', eigenfluxBin: bin,
+  const client = new AliceRealmStreamClient({
+    serverName: 'owned-server', alicerealmBin: bin,
     logger: new Logger({ info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() }),
     onPmEvent: async () => {}, onAuthRequired: async detail => { receive(detail); },
   });
@@ -88,7 +88,7 @@ process.stderr.write('earlier-diagnostic:' + 'x'.repeat(20000), () => {
 });
 
 test('a spawn failure schedules one reconnect when error is followed by close', async () => {
-  const home = mkdtempSync(join(tmpdir(), 'eigenflux-stream-spawn-'));
+  const home = mkdtempSync(join(tmpdir(), 'alicerealm-stream-spawn-'));
   let reconnect!: () => void;
   const reconnected = new Promise<void>(resolve => { reconnect = resolve; });
   const info = jest.fn((message: string) => {
@@ -96,8 +96,8 @@ test('a spawn failure schedules one reconnect when error is followed by close', 
   });
   const onStreamError = jest.fn();
   let timeout: NodeJS.Timeout | undefined;
-  const client = new EigenFluxStreamClient({
-    serverName: 'owned-server', eigenfluxBin: join(home, 'missing-cli'),
+  const client = new AliceRealmStreamClient({
+    serverName: 'owned-server', alicerealmBin: join(home, 'missing-cli'),
     logger: new Logger({ info, debug: jest.fn(), warn: jest.fn(), error: jest.fn() }),
     onPmEvent: async () => {}, onAuthRequired: async () => {}, onStreamError,
   });
@@ -108,7 +108,7 @@ test('a spawn failure schedules one reconnect when error is followed by close', 
     })]);
     expect(onStreamError).toHaveBeenCalledTimes(1);
     expect(info.mock.calls.filter(([message]) => message.includes('Stream reconnecting')))
-      .toEqual([['[EigenFlux] Stream reconnecting in 1000ms (failure #1) for server=owned-server']]);
+      .toEqual([['[AliceRealm] Stream reconnecting in 1000ms (failure #1) for server=owned-server']]);
   } finally {
     clearTimeout(timeout);
     await client.stop();
@@ -118,8 +118,8 @@ test('a spawn failure schedules one reconnect when error is followed by close', 
 
 
 test.each(['resolve', 'reject'])('a stopped generation cannot reconnect after its auth warning %s', async outcome => {
-  const home = mkdtempSync(join(tmpdir(), 'eigenflux-stream-generation-'));
-  const bin = join(home, 'eigenflux');
+  const home = mkdtempSync(join(tmpdir(), 'alicerealm-stream-generation-'));
+  const bin = join(home, 'alicerealm');
   const marker = join(home, 'started');
   writeFileSync(bin, `#!${process.execPath}
 const fs = require('node:fs');
@@ -139,8 +139,8 @@ if (!fs.existsSync(marker)) {
   let ready!: () => void;
   const restarted = new Promise<void>(resolve => { ready = resolve; });
   const info = jest.fn();
-  const client = new EigenFluxStreamClient({
-    serverName: 'owned-server', eigenfluxBin: bin,
+  const client = new AliceRealmStreamClient({
+    serverName: 'owned-server', alicerealmBin: bin,
     logger: new Logger({ info, debug: jest.fn(), warn: jest.fn(), error: jest.fn() }),
     onPmEvent: async () => { ready(); },
     onAuthRequired: async () => {

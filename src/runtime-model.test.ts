@@ -1,12 +1,12 @@
 import { registerRuntimeModelHooks } from './runtime-model';
-import { EigenFluxSettingsReporter } from './settings-reporter';
-import { EigenFluxPollingClient } from './polling-client';
+import { AliceRealmSettingsReporter } from './settings-reporter';
+import { AliceRealmPollingClient } from './polling-client';
 import { Logger } from './logger';
 import type { RoutingConfig } from './config';
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 
 jest.mock('./cli-executor');
-const execMock = execEigenflux as jest.MockedFunction<typeof execEigenflux>;
+const execMock = execAliceRealm as jest.MockedFunction<typeof execAliceRealm>;
 const logger = new Logger({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() });
 
 function runtime(agentId: string, sessionKey = 'main') {
@@ -15,8 +15,8 @@ function runtime(agentId: string, sessionKey = 'main') {
     routeOverrides: { sessionKey: sessionKey !== 'main', agentId: true,
       replyChannel: false, replyTo: false, replyAccountId: false },
   };
-  return { routing, settingsReporter: new EigenFluxSettingsReporter({
-    serverName: agentId, eigenfluxBin: 'eigenflux', logger,
+  return { routing, settingsReporter: new AliceRealmSettingsReporter({
+    serverName: agentId, alicerealmBin: 'alicerealm', logger,
   }) };
 }
 
@@ -25,7 +25,7 @@ test('host model events stay scoped and reach both normal Feed and settings repo
   const own = runtime('owner');
   const other = runtime('other');
   const on = jest.fn();
-  const inheritedModel = process.env.EIGENFLUX_MODEL;
+  const inheritedModel = process.env.ALICEREALM_MODEL;
   registerRuntimeModelHooks({ on } as any, () => [own, other], logger);
   expect(on).toHaveBeenCalledTimes(1);
   expect(on.mock.calls[0][0]).toBe('model_call_started');
@@ -34,30 +34,30 @@ test('host model events stay scoped and reach both normal Feed and settings repo
   expect(execMock).not.toHaveBeenCalled();
   expect(own.settingsReporter.getObservedModel()).toBe('current-model');
   expect(other.settingsReporter.getObservedModel()).toBeUndefined();
-  expect(process.env.EIGENFLUX_MODEL).toBe(inheritedModel);
+  expect(process.env.ALICEREALM_MODEL).toBe(inheritedModel);
 
   // Feed carries the observation even while baseline accounts cannot write settings.
   execMock.mockResolvedValue({ kind: 'success', data: { items: [], notifications: [], has_more: false } });
-  const feed = new EigenFluxPollingClient({
-    serverName: 'owner', eigenfluxBin: 'eigenflux', logger,
+  const feed = new AliceRealmPollingClient({
+    serverName: 'owner', alicerealmBin: 'alicerealm', logger,
     resolveModel: () => own.settingsReporter.getObservedModel(),
     resolvePollIntervalSec: async () => 600,
     onFeedPolled: async () => {}, onAuthRequired: async () => {},
   });
   await feed.pollOnce();
-  expect(execMock).toHaveBeenLastCalledWith('eigenflux', expect.arrayContaining(['feed', 'poll', '-s', 'owner']),
-    expect.objectContaining({ env: { EIGENFLUX_MODEL: 'current-model' } }));
+  expect(execMock).toHaveBeenLastCalledWith('alicerealm', expect.arrayContaining(['feed', 'poll', '-s', 'owner']),
+    expect.objectContaining({ env: { ALICEREALM_MODEL: 'current-model' } }));
   await own.settingsReporter.report();
-  expect(execMock).toHaveBeenLastCalledWith('eigenflux',
+  expect(execMock).toHaveBeenLastCalledWith('alicerealm',
     ['settings', 'push', '--mode', 'plugin', '-s', 'owner', '--model', 'current-model'],
-    expect.objectContaining({ env: { EIGENFLUX_MODEL: undefined } }));
+    expect.objectContaining({ env: { ALICEREALM_MODEL: undefined } }));
 
   observe({ model: 'fallback-model', sessionKey: 'agent:owner:main' }, {});
   await feed.pollOnce();
-  expect(execMock).toHaveBeenLastCalledWith('eigenflux', expect.any(Array),
-    expect.objectContaining({ env: { EIGENFLUX_MODEL: 'fallback-model' } }));
+  expect(execMock).toHaveBeenLastCalledWith('alicerealm', expect.any(Array),
+    expect.objectContaining({ env: { ALICEREALM_MODEL: 'fallback-model' } }));
   await other.settingsReporter.report();
-  expect(execMock).toHaveBeenLastCalledWith('eigenflux',
+  expect(execMock).toHaveBeenLastCalledWith('alicerealm',
     ['settings', 'push', '--mode', 'plugin', '-s', 'other'], expect.any(Object));
 });
 

@@ -1,14 +1,14 @@
 import * as os from 'os';
 
-const execEigenfluxMock = jest.fn();
+const execAliceRealmMock = jest.fn();
 jest.mock('./cli-executor', () => ({
-  execEigenflux: (...args: any[]) => execEigenfluxMock(...args),
+  execAliceRealm: (...args: any[]) => execAliceRealmMock(...args),
 }));
 
 import {
   PLUGIN_CONFIG,
   resolvePluginConfig,
-  resolveEigenfluxHome,
+  resolveAliceRealmHome,
   discoverServers,
   getInstalledCliVersion,
   isCliOutdated,
@@ -24,36 +24,36 @@ describe('resolvePluginConfig', () => {
   test('returns defaults when config is empty', () => {
     const config = resolvePluginConfig({});
 
-    expect(config.eigenfluxBin).toBe(PLUGIN_CONFIG.DEFAULT_EIGENFLUX_BIN);
-    expect(config.skills).toEqual(['ef-broadcast', 'ef-communication']);
+    expect(config.alicerealmBin).toBe(PLUGIN_CONFIG.DEFAULT_ALICEREALM_BIN);
+    expect(config.skills).toEqual(['ar-broadcast', 'ar-communication']);
     expect(config.openclawCliBin).toBe(PLUGIN_CONFIG.DEFAULT_OPENCLAW_CLI_BIN);
     expect(config.serverRouting).toEqual({});
   });
 
-  test('resolves custom eigenfluxBin and openclawCliBin', () => {
+  test('resolves custom alicerealmBin and openclawCliBin', () => {
     const config = resolvePluginConfig({
-      eigenfluxBin: '/opt/bin/eigenflux',
+      alicerealmBin: '/opt/bin/alicerealm',
       openclawCliBin: '/opt/bin/openclaw',
     });
 
-    expect(config.eigenfluxBin).toBe('/opt/bin/eigenflux');
+    expect(config.alicerealmBin).toBe('/opt/bin/alicerealm');
     expect(config.openclawCliBin).toBe('/opt/bin/openclaw');
   });
 
   test('resolves custom skills array', () => {
     const config = resolvePluginConfig({
-      skills: ['ef-broadcast', 'ef-profile', 'custom-skill'],
+      skills: ['ar-broadcast', 'ar-profile', 'custom-skill'],
     });
 
-    expect(config.skills).toEqual(['ef-broadcast', 'ef-profile', 'custom-skill']);
+    expect(config.skills).toEqual(['ar-broadcast', 'ar-profile', 'custom-skill']);
   });
 
   test('filters out non-string and empty skills entries', () => {
     const config = resolvePluginConfig({
-      skills: ['ef-broadcast', '', 42, null, 'ef-communication'] as any,
+      skills: ['ar-broadcast', '', 42, null, 'ar-communication'] as any,
     });
 
-    expect(config.skills).toEqual(['ef-broadcast', 'ef-communication']);
+    expect(config.skills).toEqual(['ar-broadcast', 'ar-communication']);
   });
 
   test('resolves serverRouting with defaults for missing fields', () => {
@@ -76,14 +76,14 @@ describe('resolvePluginConfig', () => {
   test('ignores schema-defaulted main session fields so route discovery stays automatic', () => {
     const config = resolvePluginConfig({
       serverRouting: {
-        eigenflux: {
+        alicerealm: {
           sessionKey: 'main',
           agentId: 'main',
         },
       },
     });
 
-    const routing = config.serverRouting['eigenflux'];
+    const routing = config.serverRouting['alicerealm'];
     expect(routing).toBeDefined();
     expect(routing.routeOverrides).toEqual({
       sessionKey: false,
@@ -96,110 +96,110 @@ describe('resolvePluginConfig', () => {
 
 });
 
-describe('resolveEigenfluxHome', () => {
-  const originalEnv = process.env.EIGENFLUX_HOME;
+describe('resolveAliceRealmHome', () => {
+  const originalEnv = process.env.ALICEREALM_HOME;
 
   afterEach(() => {
     if (originalEnv === undefined) {
-      delete process.env.EIGENFLUX_HOME;
+      delete process.env.ALICEREALM_HOME;
     } else {
-      process.env.EIGENFLUX_HOME = originalEnv;
+      process.env.ALICEREALM_HOME = originalEnv;
     }
   });
 
-  test('defaults to ~/.eigenflux when EIGENFLUX_HOME is not set', () => {
-    delete process.env.EIGENFLUX_HOME;
+  test('defaults to ~/.alicerealm when ALICEREALM_HOME is not set', () => {
+    delete process.env.ALICEREALM_HOME;
 
-    const home = resolveEigenfluxHome();
-    expect(home).toBe(`${os.homedir()}/.eigenflux`);
+    const home = resolveAliceRealmHome();
+    expect(home).toBe(`${os.homedir()}/.alicerealm`);
   });
 
-  test('uses EIGENFLUX_HOME env var with .eigenflux suffix appended', () => {
-    process.env.EIGENFLUX_HOME = '/custom/path';
+  test('uses ALICEREALM_HOME env var with .alicerealm suffix appended', () => {
+    process.env.ALICEREALM_HOME = '/custom/path';
 
-    const home = resolveEigenfluxHome();
-    expect(home).toBe('/custom/path/.eigenflux');
+    const home = resolveAliceRealmHome();
+    expect(home).toBe('/custom/path/.alicerealm');
   });
 
-  test('does not double-append .eigenflux if already present', () => {
-    process.env.EIGENFLUX_HOME = '/custom/path/.eigenflux';
+  test('does not double-append .alicerealm if already present', () => {
+    process.env.ALICEREALM_HOME = '/custom/path/.alicerealm';
 
-    const home = resolveEigenfluxHome();
-    expect(home).toBe('/custom/path/.eigenflux');
+    const home = resolveAliceRealmHome();
+    expect(home).toBe('/custom/path/.alicerealm');
   });
 
-  test('uses baseDir when EIGENFLUX_HOME is not set', () => {
-    delete process.env.EIGENFLUX_HOME;
+  test('uses baseDir when ALICEREALM_HOME is not set', () => {
+    delete process.env.ALICEREALM_HOME;
 
-    const home = resolveEigenfluxHome('/opt/openclaw/plugins/eigenflux');
-    expect(home).toBe('/opt/openclaw/plugins/eigenflux/.eigenflux');
+    const home = resolveAliceRealmHome('/opt/openclaw/plugins/alicerealm');
+    expect(home).toBe('/opt/openclaw/plugins/alicerealm/.alicerealm');
   });
 
-  test('EIGENFLUX_HOME takes precedence over baseDir', () => {
-    process.env.EIGENFLUX_HOME = '/explicit/override';
+  test('ALICEREALM_HOME takes precedence over baseDir', () => {
+    process.env.ALICEREALM_HOME = '/explicit/override';
 
-    const home = resolveEigenfluxHome('/opt/openclaw/plugins/eigenflux');
-    expect(home).toBe('/explicit/override/.eigenflux');
+    const home = resolveAliceRealmHome('/opt/openclaw/plugins/alicerealm');
+    expect(home).toBe('/explicit/override/.alicerealm');
   });
 });
 
 describe('discoverServers', () => {
   beforeEach(() => {
-    execEigenfluxMock.mockReset();
+    execAliceRealmMock.mockReset();
   });
 
-  test('calls eigenflux with server list --format json', async () => {
-    execEigenfluxMock.mockResolvedValue({ kind: 'success', data: [] });
-    await discoverServers('eigenflux');
-    expect(execEigenfluxMock).toHaveBeenCalledWith(
-      'eigenflux',
+  test('calls alicerealm with server list --format json', async () => {
+    execAliceRealmMock.mockResolvedValue({ kind: 'success', data: [] });
+    await discoverServers('alicerealm');
+    expect(execAliceRealmMock).toHaveBeenCalledWith(
+      'alicerealm',
       ['server', 'list', '--format', 'json'],
       expect.any(Object)
     );
   });
 
   test('returns ok with parsed servers on success', async () => {
-    execEigenfluxMock.mockResolvedValue({
+    execAliceRealmMock.mockResolvedValue({
       kind: 'success',
-      data: [{ name: 'eigenflux', endpoint: 'https://x', current: true }],
+      data: [{ name: 'alicerealm', endpoint: 'https://x', current: true }],
     });
-    const result = await discoverServers('eigenflux');
+    const result = await discoverServers('alicerealm');
     expect(result).toEqual({
       kind: 'ok',
-      servers: [{ name: 'eigenflux', endpoint: 'https://x', current: true }],
+      servers: [{ name: 'alicerealm', endpoint: 'https://x', current: true }],
     });
   });
 
   test('surfaces not_installed when the executor reports it', async () => {
-    execEigenfluxMock.mockResolvedValue({ kind: 'not_installed', bin: 'eigenflux' });
-    const result = await discoverServers('eigenflux');
-    expect(result).toEqual({ kind: 'not_installed', bin: 'eigenflux' });
+    execAliceRealmMock.mockResolvedValue({ kind: 'not_installed', bin: 'alicerealm' });
+    const result = await discoverServers('alicerealm');
+    expect(result).toEqual({ kind: 'not_installed', bin: 'alicerealm' });
   });
 
   test('preserves a successful empty configuration', async () => {
-    execEigenfluxMock.mockResolvedValue({ kind: 'success', data: [] });
-    expect(await discoverServers('eigenflux')).toEqual({ kind: 'ok', servers: [] });
+    execAliceRealmMock.mockResolvedValue({ kind: 'success', data: [] });
+    expect(await discoverServers('alicerealm')).toEqual({ kind: 'ok', servers: [] });
   });
 
   test.each([undefined, {}, [{ name: 'missing-endpoint' }], [null]])(
     'classifies malformed server data as a retryable discovery error: %p', async (data) => {
-      execEigenfluxMock.mockResolvedValue({ kind: 'success', data });
-      expect(await discoverServers('eigenflux')).toEqual({
+      execAliceRealmMock.mockResolvedValue({ kind: 'success', data });
+      expect(await discoverServers('alicerealm')).toEqual({
         kind: 'error', error: expect.stringContaining('invalid server list'), retryable: true,
       });
     }
   );
 
   test('preserves command failures instead of presenting an empty configuration', async () => {
-    execEigenfluxMock.mockResolvedValue({ kind: 'error', error: new Error('CLI timed out') });
-    expect(await discoverServers('eigenflux')).toEqual({
+    execAliceRealmMock.mockResolvedValue({ kind: 'error', error: new Error('CLI timed out') });
+    expect(await discoverServers('alicerealm')).toEqual({
       kind: 'error', error: 'CLI timed out', retryable: true,
     });
   });
 
   test('authentication failures require recovery rather than automatic discovery retries', async () => {
-    execEigenfluxMock.mockResolvedValue({ kind: 'auth_required', stderr: 'expired' });
-    expect(await discoverServers('eigenflux')).toEqual({
+    execAliceRealmMock.mockResolvedValue({ kind: 'auth_required', stderr: 'expired' });
+    expect(await discoverServers('alicerealm')).toEqual({
       kind: 'error', error: expect.stringContaining('requires authentication'), retryable: false,
     });
   });
@@ -213,11 +213,11 @@ describe('PLUGIN_CONFIG metadata', () => {
   });
 
   test('declares every registered agent tool in the plugin contract', () => {
-    expect(pluginManifest.contracts.tools).toEqual(['eigenflux__followup']);
+    expect(pluginManifest.contracts.tools).toEqual(['alicerealm__followup']);
   });
 
   test('exports expected constant keys', () => {
-    expect(PLUGIN_CONFIG.DEFAULT_EIGENFLUX_BIN).toBe('eigenflux');
+    expect(PLUGIN_CONFIG.DEFAULT_ALICEREALM_BIN).toBe('alicerealm');
     expect(PLUGIN_CONFIG.DEFAULT_SESSION_KEY).toBe('main');
     expect(PLUGIN_CONFIG.DEFAULT_AGENT_ID).toBe('main');
   });
@@ -253,18 +253,18 @@ describe('isCliOutdated', () => {
 });
 
 describe('getInstalledCliVersion', () => {
-  beforeEach(() => execEigenfluxMock.mockReset());
+  beforeEach(() => execAliceRealmMock.mockReset());
 
-  test('returns cli_version from `eigenflux version` JSON', async () => {
-    execEigenfluxMock.mockResolvedValue({ kind: 'success', data: { cli_version: '0.0.12' } });
-    await expect(getInstalledCliVersion('eigenflux')).resolves.toBe('0.0.12');
-    expect(execEigenfluxMock).toHaveBeenCalledWith('eigenflux', ['version'], expect.anything());
+  test('returns cli_version from `alicerealm version` JSON', async () => {
+    execAliceRealmMock.mockResolvedValue({ kind: 'success', data: { cli_version: '0.0.12' } });
+    await expect(getInstalledCliVersion('alicerealm')).resolves.toBe('0.0.12');
+    expect(execAliceRealmMock).toHaveBeenCalledWith('alicerealm', ['version'], expect.anything());
   });
 
   test('returns null when CLI is missing or version absent', async () => {
-    execEigenfluxMock.mockResolvedValue({ kind: 'not_installed', bin: 'eigenflux' });
-    await expect(getInstalledCliVersion('eigenflux')).resolves.toBeNull();
-    execEigenfluxMock.mockResolvedValue({ kind: 'success', data: {} });
-    await expect(getInstalledCliVersion('eigenflux')).resolves.toBeNull();
+    execAliceRealmMock.mockResolvedValue({ kind: 'not_installed', bin: 'alicerealm' });
+    await expect(getInstalledCliVersion('alicerealm')).resolves.toBeNull();
+    execAliceRealmMock.mockResolvedValue({ kind: 'success', data: {} });
+    await expect(getInstalledCliVersion('alicerealm')).resolves.toBeNull();
   });
 });

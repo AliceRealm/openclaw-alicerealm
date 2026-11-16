@@ -29,7 +29,7 @@ type SessionStoreEntryLike = {
   [key: string]: unknown;
 };
 
-type EigenFluxRuntimeApi = {
+type AliceRealmRuntimeApi = {
   subagent?: {
     run?: (params: {
       sessionKey: string;
@@ -147,12 +147,12 @@ const AUTH_REMINDER_RETRY_AFTER_MS = 15 * 60 * 1000;
 // Background deliveries (feed / PM / profile) run on a dedicated queue lane so a
 // slow or stuck agent run never serializes behind / ahead of the user's own
 // interactive (per-chat) lane. The lane is orthogonal to the session key.
-const BACKGROUND_LANE = 'eigenflux-bg';
-const HEARTBEAT_REASON = 'plugin:eigenflux';
+const BACKGROUND_LANE = 'alicerealm-bg';
+const HEARTBEAT_REASON = 'plugin:alicerealm';
 
-export type EigenFluxNotifierConfig = {
+export type AliceRealmNotifierConfig = {
   store?: PluginRuntimeStore;
-  eigenfluxBin?: string;
+  alicerealmBin?: string;
   serverName?: string;
   sessionKey: string;
   agentId: string;
@@ -172,12 +172,12 @@ export type DeliverOptions = {
    * (a random suffix is appended to prevent context accumulation).
    * The session is automatically deleted after delivery completes.
    * Skips route persistence and stale-route re-resolve fallback.
-   * Typical use: `eigenflux:feed:<serverName>` for isolated feed processing.
+   * Typical use: `alicerealm:feed:<serverName>` for isolated feed processing.
    */
   targetSessionKey?: string;
   /**
    * Deliver to this stable, isolated session without deleting it afterwards.
-   * PM delivery uses one key per EigenFlux conv_id so conversation context is
+   * PM delivery uses one key per AliceRealm conv_id so conversation context is
    * retained without sharing the user's agent:main:main session.
    */
   persistentSessionKey?: string;
@@ -185,7 +185,7 @@ export type DeliverOptions = {
   lane?: string;
   /**
    * When true, deliver *silently*: run the host agent loop (so it can read its
-   * own memory/session and execute CLI tools like `eigenflux profile update`)
+   * own memory/session and execute CLI tools like `alicerealm profile update`)
    * but suppress the user-facing channel reply. Used by the daily profile
    * refresh so bio updates stay imperceptible to the user.
    *
@@ -227,21 +227,21 @@ type PendingConfirmedDelivery = {
   createdAt: number;
 };
 
-export class EigenFluxNotifier {
+export class AliceRealmNotifier {
   private readonly api: OpenClawPluginApi;
   private readonly logger: Logger;
-  private readonly config: EigenFluxNotifierConfig;
+  private readonly config: AliceRealmNotifierConfig;
   private readonly pendingCleanups: Promise<void>[] = [];
   private pendingConfirmedDelivery?: PendingConfirmedDelivery;
 
-  constructor(api: OpenClawPluginApi, logger: Logger, config: EigenFluxNotifierConfig) {
+  constructor(api: OpenClawPluginApi, logger: Logger, config: AliceRealmNotifierConfig) {
     this.api = api;
     this.logger = logger;
     this.config = config;
   }
 
-  private get runtime(): EigenFluxRuntimeApi {
-    return (this.api.runtime ?? {}) as EigenFluxRuntimeApi;
+  private get runtime(): AliceRealmRuntimeApi {
+    return (this.api.runtime ?? {}) as AliceRealmRuntimeApi;
   }
 
   /** Order delivery has one durable host run. Never fall back after submission. */
@@ -259,13 +259,13 @@ export class EigenFluxNotifier {
     if (!runId) {
       const digest = createHash('sha256').update(context.key).digest('hex');
       const base = await this.resolveRoute();
-      const route = { ...base.route, sessionKey: `agent:${base.route.agentId}:eigenflux:order:${digest}` };
+      const route = { ...base.route, sessionKey: `agent:${base.route.agentId}:alicerealm:order:${digest}` };
       if (!await this.seedOneShotDeliveryContext(route.sessionKey, route)) return false;
       checkpoint({ status: 'submitting' });
       // A thrown call can still have been accepted remotely. The submitting
       // receipt deliberately prevents automatic replay in that ambiguous case.
       const submitted = await subagent.run({ sessionKey: route.sessionKey, message,
-        deliver: true, idempotencyKey: `eigenflux-order-${digest}`, lane: 'eigenflux-order' });
+        deliver: true, idempotencyKey: `alicerealm-order-${digest}`, lane: 'alicerealm-order' });
       if (!submitted.runId) throw new Error('Order run acceptance missing runId');
       runId = submitted.runId;
       checkpoint({ status: 'running', runId });
@@ -595,7 +595,7 @@ export class EigenFluxNotifier {
       this.logger.warn(
         `Feed main-session delivery failed: ${result.error ?? 'unknown'}. ` +
         `If runtime.system heartbeat APIs are unavailable on this host, set ` +
-        `EIGENFLUX_FEED_DELIVERY=oneshot to fall back to the isolated path.`
+        `ALICEREALM_FEED_DELIVERY=oneshot to fall back to the isolated path.`
       );
     }
     return result.ok;
@@ -1164,7 +1164,7 @@ export class EigenFluxNotifier {
   }
 
   /**
-   * Persist the successful route to the eigenflux CLI config unless it came from
+   * Persist the successful route to the alicerealm CLI config unless it came from
    * the remembered config already (no-op when unchanged).
    */
   private async rememberRouteIfChanged(

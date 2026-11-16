@@ -2,24 +2,24 @@ import { Logger } from './logger';
 import type { CliResult } from './cli-executor';
 
 jest.mock('./cli-executor');
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 import { handleFollowup, FOLLOWUP_KINDS, FollowupDeps, FollowupResult } from './feedback-tool';
 
-const execMock = execEigenflux as jest.MockedFunction<typeof execEigenflux>;
+const execMock = execAliceRealm as jest.MockedFunction<typeof execAliceRealm>;
 
 function createLogger(): Logger {
   return new Logger({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() });
 }
 
 function makeDeps(): FollowupDeps {
-  return { eigenfluxBin: 'eigenflux', serverName: 'srv-a', logger: createLogger() };
+  return { alicerealmBin: 'alicerealm', serverName: 'srv-a', logger: createLogger() };
 }
 
 function okResult(data: FollowupResult): CliResult<FollowupResult> {
   return { kind: 'success', data } as CliResult<FollowupResult>;
 }
 
-/** Extract argv from the single execEigenflux call. */
+/** Extract argv from the single execAliceRealm call. */
 function calledArgs(): string[] {
   expect(execMock).toHaveBeenCalledTimes(1);
   return execMock.mock.calls[0][1];
@@ -47,7 +47,7 @@ describe('handleFollowup thin shell', () => {
     const r = await handleFollowup(makeDeps(), { item_id: ' a1 ', kind: 'task', brief: 'wrote up' });
 
     const args = calledArgs();
-    expect(execMock.mock.calls[0][0]).toBe('eigenflux');
+    expect(execMock.mock.calls[0][0]).toBe('alicerealm');
     expect(args.slice(0, 3)).toEqual(['feed', 'event', 'record']);
     expect(args).toEqual([
       'feed', 'event', 'record',

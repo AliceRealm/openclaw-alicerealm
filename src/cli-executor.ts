@@ -1,5 +1,5 @@
 /**
- * Generic helper to run `eigenflux` CLI commands as one-shot subprocesses.
+ * Generic helper to run `alicerealm` CLI commands as one-shot subprocesses.
  */
 
 import { execFile } from 'child_process';
@@ -26,14 +26,14 @@ export interface ExecOptions {
   /**
    * When false, stdout is returned as a raw string instead of being parsed as
    * JSON. Useful for CLI commands whose stdout is a human-readable status line
-   * (e.g. `eigenflux config set`). Defaults to true.
+   * (e.g. `alicerealm config set`). Defaults to true.
    */
   parseJson?: boolean;
 }
 
 /** The Gateway serves multiple Agents; model identity must be scoped per call. */
 export function cliEnvironment(overrides?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  return { ...process.env, EIGENFLUX_MODEL: undefined, ...overrides };
+  return { ...process.env, ALICEREALM_MODEL: undefined, ...overrides };
 }
 
 /** Only the CLI's final structured notice can classify credential service failures. */
@@ -52,7 +52,7 @@ function authenticationUnavailable(stderr: string): boolean {
   }
 }
 
-export function execEigenflux<T>(
+export function execAliceRealm<T>(
   bin: string,
   args: string[],
   options?: ExecOptions
@@ -61,7 +61,7 @@ export function execEigenflux<T>(
   const logger = options?.logger;
 
   return new Promise((resolve) => {
-    logger?.debug(`execEigenflux: ${bin} ${args.join(' ')}`);
+    logger?.debug(`execAliceRealm: ${bin} ${args.join(' ')}`);
 
     execFile(
       bin,
@@ -77,7 +77,7 @@ export function execEigenflux<T>(
         if (error) {
           const exitCode = (error as NodeJS.ErrnoException & { code?: number | string }).code;
           if (exitCode === 'ENOENT') {
-            logger?.warn(`execEigenflux: binary not found: ${bin}`);
+            logger?.warn(`execAliceRealm: binary not found: ${bin}`);
             resolve({ kind: 'not_installed', bin });
             return;
           }
@@ -89,12 +89,12 @@ export function execEigenflux<T>(
                 : (error as any).status ?? null;
 
           if (numericExit === EXIT_AUTH_REQUIRED) {
-            logger?.warn(`execEigenflux auth required: ${stderr.trim()}`);
+            logger?.warn(`execAliceRealm auth required: ${stderr.trim()}`);
             resolve({ kind: 'auth_required', stderr: stderr.trim() });
             return;
           }
 
-          logger?.error(`execEigenflux failed (exit=${numericExit}): ${stderr.trim() || error.message}`);
+          logger?.error(`execAliceRealm failed (exit=${numericExit}): ${stderr.trim() || error.message}`);
           resolve({
             kind: 'error',
             error: new Error(stderr.trim() || error.message),
@@ -109,7 +109,7 @@ export function execEigenflux<T>(
         // Maintenance failures may be best-effort while the command itself
         // succeeds. Preserve only those diagnostics, not arbitrary stderr.
         for (const line of stderr.split(/\r?\n/)) {
-          if (line.startsWith('[eigenflux:maintenance] ')) logger?.warn(line);
+          if (line.startsWith('[alicerealm:maintenance] ')) logger?.warn(line);
         }
 
         const trimmed = stdout.trim();
@@ -130,7 +130,7 @@ export function execEigenflux<T>(
           const data = JSON.parse(trimmed) as T;
           resolve({ kind: 'success', data });
         } catch (parseError) {
-          logger?.error(`execEigenflux JSON parse error: ${(parseError as Error).message}`);
+          logger?.error(`execAliceRealm JSON parse error: ${(parseError as Error).message}`);
           resolve({
             kind: 'error',
             error: new Error(`Failed to parse CLI output: ${(parseError as Error).message}`),

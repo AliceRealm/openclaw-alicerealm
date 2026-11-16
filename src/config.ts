@@ -1,7 +1,7 @@
 /**
- * Configuration for the EigenFlux plugin.
+ * Configuration for the AliceRealm plugin.
  *
- * Server management is now handled by the eigenflux CLI.
+ * Server management is now handled by the alicerealm CLI.
  * The plugin config only holds plugin-level settings and
  * per-server notification routing overrides.
  */
@@ -11,15 +11,15 @@ import * as path from 'path';
 
 import { Logger } from './logger';
 import { normalizeReplyTarget } from './reply-target';
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 
-const PLUGIN_VERSION = '0.0.54';
-// Minimum eigenflux CLI version this plugin build expects. When the installed
+const PLUGIN_VERSION = '0.0.55';
+// Minimum alicerealm CLI version this plugin build expects. When the installed
 // CLI is older, the discovery service nudges the agent to update it (the agent
 // updates the CLI at runtime; nothing is auto-run at install time). Bump this
 // when the plugin starts relying on newer CLI behavior.
 const EXPECTED_CLI_VERSION = '0.6.7';
-const DEFAULT_EIGENFLUX_BIN = 'eigenflux';
+const DEFAULT_ALICEREALM_BIN = 'alicerealm';
 const DEFAULT_SESSION_KEY = 'main';
 const DEFAULT_AGENT_ID = 'main';
 const DEFAULT_OPENCLAW_CLI_BIN = 'openclaw';
@@ -51,8 +51,8 @@ export type DiscoveredServer = {
   current: boolean;
 };
 
-export type EigenFluxPluginConfig = {
-  eigenfluxBin?: string;
+export type AliceRealmPluginConfig = {
+  alicerealmBin?: string;
   skills?: string[];
   openclawCliBin?: string;
   serverRouting?: Record<string, {
@@ -64,8 +64,8 @@ export type EigenFluxPluginConfig = {
   }>;
 };
 
-export type ResolvedEigenFluxPluginConfig = {
-  eigenfluxBin: string;
+export type ResolvedAliceRealmPluginConfig = {
+  alicerealmBin: string;
   skills: string[];
   openclawCliBin: string;
   serverRouting: Record<string, RoutingConfig>;
@@ -169,11 +169,11 @@ export type DiscoveryResult =
   | { kind: 'error'; error: string; retryable: boolean };
 
 export async function discoverServers(
-  eigenfluxBin: string,
+  alicerealmBin: string,
   logger?: Logger
 ): Promise<DiscoveryResult> {
-  const result = await execEigenflux<DiscoveredServer[]>(
-    eigenfluxBin,
+  const result = await execAliceRealm<DiscoveredServer[]>(
+    alicerealmBin,
     ['server', 'list', '--format', 'json'],
     { logger }
   );
@@ -185,7 +185,7 @@ export async function discoverServers(
     )) {
       return { kind: 'ok', servers: result.data };
     }
-    return { kind: 'error', error: 'eigenflux server list returned an invalid server list', retryable: true };
+    return { kind: 'error', error: 'alicerealm server list returned an invalid server list', retryable: true };
   }
 
   if (result.kind === 'not_installed') {
@@ -193,23 +193,23 @@ export async function discoverServers(
   }
 
   if (result.kind === 'auth_required') {
-    return { kind: 'error', error: 'eigenflux server list requires authentication; follow the CLI recovery instructions', retryable: false };
+    return { kind: 'error', error: 'alicerealm server list requires authentication; follow the CLI recovery instructions', retryable: false };
   }
 
   return { kind: 'error', error: result.error.message, retryable: true };
 }
 
 /**
- * Read the installed CLI version via `eigenflux version` (its JSON output
+ * Read the installed CLI version via `alicerealm version` (its JSON output
  * includes `cli_version`). Returns null when the CLI is missing or the version
  * can't be determined — callers treat null as "don't nag".
  */
 export async function getInstalledCliVersion(
-  eigenfluxBin: string,
+  alicerealmBin: string,
   logger?: Logger
 ): Promise<string | null> {
-  const result = await execEigenflux<{ cli_version?: string }>(
-    eigenfluxBin,
+  const result = await execAliceRealm<{ cli_version?: string }>(
+    alicerealmBin,
     ['version'],
     { logger }
   );
@@ -239,21 +239,21 @@ export function isCliOutdated(installed: string | null, target: string): boolean
   return false;
 }
 
-// ─── EigenFlux Home ─────────────────────────────────────────────────────────
+// ─── AliceRealm Home ─────────────────────────────────────────────────────────
 
-export function resolveEigenfluxHome(baseDir?: string): string {
-  const envHome = process.env.EIGENFLUX_HOME;
+export function resolveAliceRealmHome(baseDir?: string): string {
+  const envHome = process.env.ALICEREALM_HOME;
   if (envHome) {
     const expanded = expandHomeDir(envHome);
-    if (!expanded.endsWith('.eigenflux')) {
-      return path.join(expanded, '.eigenflux');
+    if (!expanded.endsWith('.alicerealm')) {
+      return path.join(expanded, '.alicerealm');
     }
     return expanded;
   }
   if (baseDir) {
-    return path.join(baseDir, '.eigenflux');
+    return path.join(baseDir, '.alicerealm');
   }
-  return path.join(os.homedir(), '.eigenflux');
+  return path.join(os.homedir(), '.alicerealm');
 }
 
 // ─── Config Resolution ──────────────────────────────────────────────────────
@@ -286,7 +286,7 @@ function resolveRoutingConfig(
 export function resolvePluginConfig(
   pluginConfig: unknown,
   logger?: Logger
-): ResolvedEigenFluxPluginConfig {
+): ResolvedAliceRealmPluginConfig {
   const normalized = isRecord(pluginConfig) ? pluginConfig : {};
 
   const rawRouting = isRecord(normalized.serverRouting) ? normalized.serverRouting : {};
@@ -300,10 +300,10 @@ export function resolvePluginConfig(
 
   const rawSkills = Array.isArray(normalized.skills)
     ? normalized.skills.filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
-    : ['ef-broadcast', 'ef-communication'];
+    : ['ar-broadcast', 'ar-communication'];
 
   return {
-    eigenfluxBin: readNonEmptyString(normalized.eigenfluxBin) ?? DEFAULT_EIGENFLUX_BIN,
+    alicerealmBin: readNonEmptyString(normalized.alicerealmBin) ?? DEFAULT_ALICEREALM_BIN,
     skills: rawSkills,
     openclawCliBin:
       readNonEmptyString(normalized.openclawCliBin) ?? DEFAULT_OPENCLAW_CLI_BIN,
@@ -324,7 +324,7 @@ export function expandHomeDir(input: string): string {
 }
 
 export const PLUGIN_CONFIG = {
-  DEFAULT_EIGENFLUX_BIN,
+  DEFAULT_ALICEREALM_BIN,
   DEFAULT_SESSION_KEY,
   DEFAULT_AGENT_ID,
   DEFAULT_OPENCLAW_CLI_BIN,

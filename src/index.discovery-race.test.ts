@@ -11,11 +11,11 @@ const discoverServersMock = jest.fn();
 jest.mock('./config', () => ({
   ...jest.requireActual('./config'),
   discoverServers: (...args: unknown[]) => discoverServersMock(...args),
-  resolveEigenfluxHome: () => '/tmp/eigenflux-discovery-race-tests/.eigenflux',
+  resolveAliceRealmHome: () => '/tmp/alicerealm-discovery-race-tests/.alicerealm',
 }));
 jest.mock('./cli-executor', () => ({
   ...jest.requireActual('./cli-executor'),
-  execEigenflux: jest.fn().mockResolvedValue({ kind: 'success' }),
+  execAliceRealm: jest.fn().mockResolvedValue({ kind: 'success' }),
 }));
 
 // Keep the real polling, stream and notifier lifecycles; isolate CLI processes.
@@ -26,11 +26,11 @@ jest.mock('child_process', () => ({
 }));
 
 import plugin from './index';
-import { EigenFluxPollingClient } from './polling-client';
-import { EigenFluxStreamClient } from './stream-client';
+import { AliceRealmPollingClient } from './polling-client';
+import { AliceRealmStreamClient } from './stream-client';
 
 const configured = {
-  kind: 'ok', servers: [{ name: 'eigenflux', endpoint: 'https://example.invalid', current: true }],
+  kind: 'ok', servers: [{ name: 'alicerealm', endpoint: 'https://example.invalid', current: true }],
 };
 const retryable = { kind: 'error', error: 'temporary discovery failure', retryable: true };
 
@@ -57,7 +57,7 @@ describe('discovery runtime ownership with real clients', () => {
   let pollStop: jest.SpyInstance;
   let streamStart: jest.SpyInstance;
   let streamStatus: jest.SpyInstance;
-  const originalChannel = process.env.EIGENFLUX_CHANNEL;
+  const originalChannel = process.env.ALICEREALM_CHANNEL;
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -69,19 +69,19 @@ describe('discovery runtime ownership with real clients', () => {
       });
       return child;
     });
-    pollStart = jest.spyOn(EigenFluxPollingClient.prototype, 'start');
-    pollStop = jest.spyOn(EigenFluxPollingClient.prototype, 'stop');
-    streamStart = jest.spyOn(EigenFluxStreamClient.prototype, 'start');
-    streamStatus = jest.spyOn(EigenFluxStreamClient.prototype, 'isRunning');
+    pollStart = jest.spyOn(AliceRealmPollingClient.prototype, 'start');
+    pollStop = jest.spyOn(AliceRealmPollingClient.prototype, 'stop');
+    streamStart = jest.spyOn(AliceRealmStreamClient.prototype, 'start');
+    streamStatus = jest.spyOn(AliceRealmStreamClient.prototype, 'isRunning');
   });
 
   afterEach(async () => {
-    for (const poller of pollStart.mock.instances as EigenFluxPollingClient[]) poller.stop();
-    await Promise.all((streamStart.mock.instances as EigenFluxStreamClient[]).map(stream => stream.stop()));
+    for (const poller of pollStart.mock.instances as AliceRealmPollingClient[]) poller.stop();
+    await Promise.all((streamStart.mock.instances as AliceRealmStreamClient[]).map(stream => stream.stop()));
     jest.restoreAllMocks();
     jest.useRealTimers();
-    if (originalChannel === undefined) delete process.env.EIGENFLUX_CHANNEL;
-    else process.env.EIGENFLUX_CHANNEL = originalChannel;
+    if (originalChannel === undefined) delete process.env.ALICEREALM_CHANNEL;
+    else process.env.ALICEREALM_CHANNEL = originalChannel;
   });
 
   test.each(['retry', 'command'])('%s finishing first preserves one runtime group through stop', async (first) => {
@@ -90,7 +90,7 @@ describe('discovery runtime ownership with real clients', () => {
     const { service, command } = register();
     await service.start();
     const commandReply = command.handler({ args: 'servers' });
-    let commandStream: EigenFluxStreamClient;
+    let commandStream: AliceRealmStreamClient;
     if (first === 'command') {
       commandDiscovery.resolve(configured);
       await commandReply;
@@ -105,16 +105,16 @@ describe('discovery runtime ownership with real clients', () => {
       commandStream = streamStatus.mock.instances[0];
       expect(reply.text).toContain('streaming');
     }
-    const runningStream = streamStart.mock.instances[0] as EigenFluxStreamClient;
-    const runningPoller = pollStart.mock.instances[0] as EigenFluxPollingClient;
+    const runningStream = streamStart.mock.instances[0] as AliceRealmStreamClient;
+    const runningPoller = pollStart.mock.instances[0] as AliceRealmPollingClient;
     expect(commandStream!).toBe(runningStream);
     await service.stop();
     expect(pollStop.mock.instances).toContain(runningPoller);
     expect(runningStream.isRunning()).toBe(false);
     expect(spawnMock.mock.results[0].value.kill).toHaveBeenCalledWith('SIGTERM');
-    const pollsBefore = (require('./cli-executor').execEigenflux as jest.Mock).mock.calls.length;
+    const pollsBefore = (require('./cli-executor').execAliceRealm as jest.Mock).mock.calls.length;
     await jest.advanceTimersByTimeAsync(600_000);
-    expect((require('./cli-executor').execEigenflux as jest.Mock).mock.calls.length).toBe(pollsBefore);
+    expect((require('./cli-executor').execAliceRealm as jest.Mock).mock.calls.length).toBe(pollsBefore);
   });
 
   test('a command result from before stop cannot replace the restarted runtime', async () => {
@@ -131,7 +131,7 @@ describe('discovery runtime ownership with real clients', () => {
     const reply = await commandReply;
     expect(reply.text).toContain('restarted');
     expect(reply.text).toContain('streaming');
-    expect(reply.text).not.toContain('- eigenflux:');
+    expect(reply.text).not.toContain('- alicerealm:');
     await service.stop();
     expect(spawnMock.mock.results[0].value.kill).toHaveBeenCalledWith('SIGTERM');
   });
@@ -148,6 +148,6 @@ describe('discovery runtime ownership with real clients', () => {
     child.emit('close', 0, null);
     await stopping;
     commandDiscovery.resolve(configured);
-    expect((await commandReply).text).toBe('No EigenFlux servers discovered.');
+    expect((await commandReply).text).toBe('No AliceRealm servers discovered.');
   });
 });

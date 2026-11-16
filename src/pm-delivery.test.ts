@@ -37,17 +37,17 @@ describe('PM delivery routing', () => {
   });
 
   test('session and lane keys are stable per peer/conversation and isolate peer collisions', () => {
-    expect(buildPmSessionKey('eigenflux', 'peer-a', 'conv-a')).toBe(
-      buildPmSessionKey('eigenflux', 'peer-a', 'conv-a')
+    expect(buildPmSessionKey('alicerealm', 'peer-a', 'conv-a')).toBe(
+      buildPmSessionKey('alicerealm', 'peer-a', 'conv-a')
     );
-    expect(buildPmLane('eigenflux', 'peer-a', 'conv-a')).toBe(
-      buildPmLane('eigenflux', 'peer-a', 'conv-a')
+    expect(buildPmLane('alicerealm', 'peer-a', 'conv-a')).toBe(
+      buildPmLane('alicerealm', 'peer-a', 'conv-a')
     );
-    expect(buildPmSessionKey('eigenflux', 'peer-a', 'conv-a')).not.toBe(
-      buildPmSessionKey('eigenflux', 'peer-a', 'conv-b')
+    expect(buildPmSessionKey('alicerealm', 'peer-a', 'conv-a')).not.toBe(
+      buildPmSessionKey('alicerealm', 'peer-a', 'conv-b')
     );
-    expect(buildPmSessionKey('eigenflux', 'peer-a', 'conv-a')).not.toBe(
-      buildPmSessionKey('eigenflux', 'peer-b', 'conv-a')
+    expect(buildPmSessionKey('alicerealm', 'peer-a', 'conv-a')).not.toBe(
+      buildPmSessionKey('alicerealm', 'peer-b', 'conv-a')
     );
   });
 });

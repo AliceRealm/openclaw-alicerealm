@@ -11,7 +11,7 @@ jest.mock('./session-route-memory', () => ({
   writeStoredNotificationRoute: (...args: any[]) => writeStoredNotificationRouteMock(...args),
 }));
 
-import { EigenFluxNotifier } from './notifier';
+import { AliceRealmNotifier } from './notifier';
 import { UnconfirmedFeedDeliveryError } from './feed-push-scheduler';
 
 const sessionStoreSdkMock: {
@@ -55,9 +55,9 @@ function createLogger(): Logger {
 
 function createApi(overrides: Partial<OpenClawPluginApi> = {}): OpenClawPluginApi {
   return {
-    id: 'eigenflux',
-    name: 'EigenFlux',
-    source: '/tmp/eigenflux',
+    id: 'alicerealm',
+    name: 'AliceRealm',
+    source: '/tmp/alicerealm',
     config: {},
     pluginConfig: {},
     logger: {
@@ -82,7 +82,7 @@ function createConfig() {
   };
 }
 
-describe('EigenFluxNotifier', () => {
+describe('AliceRealmNotifier', () => {
   beforeEach(() => {
     readStoredNotificationRouteMock.mockReset();
     writeStoredNotificationRouteMock.mockReset();
@@ -93,7 +93,7 @@ describe('EigenFluxNotifier', () => {
   test('prefers runtime.subagent delivery when available', async () => {
     const run = jest.fn().mockResolvedValue({ runId: 'run-subagent' });
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run },
@@ -103,13 +103,13 @@ describe('EigenFluxNotifier', () => {
       createConfig()
     );
 
-    await expect(notifier.deliver('[EIGENFLUX_TEST] payload')).resolves.toBe(true);
+    await expect(notifier.deliver('[ALICEREALM_TEST] payload')).resolves.toBe(true);
     expect(run).toHaveBeenCalledWith({
       sessionKey: 'agent:main:feishu:direct:ou_123',
-      message: '[EIGENFLUX_TEST] payload',
+      message: '[ALICEREALM_TEST] payload',
       deliver: true,
       idempotencyKey: expect.any(String),
-      lane: 'eigenflux-bg',
+      lane: 'alicerealm-bg',
     });
   });
 
@@ -118,7 +118,7 @@ describe('EigenFluxNotifier', () => {
     const enqueueSystemEvent = jest.fn().mockReturnValue(true);
     const requestHeartbeatNow = jest.fn();
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run },
@@ -130,16 +130,16 @@ describe('EigenFluxNotifier', () => {
     );
 
     await expect(
-      notifier.deliver('[EIGENFLUX_TEST] silent', { silent: true })
+      notifier.deliver('[ALICEREALM_TEST] silent', { silent: true })
     ).resolves.toBe(true);
 
     // Agent loop still runs (so it can call the CLI) — but with delivery off.
     expect(run).toHaveBeenCalledWith({
       sessionKey: 'agent:main:feishu:direct:ou_123',
-      message: '[EIGENFLUX_TEST] silent',
+      message: '[ALICEREALM_TEST] silent',
       deliver: false,
       idempotencyKey: expect.any(String),
-      lane: 'eigenflux-bg',
+      lane: 'alicerealm-bg',
     });
     // Heartbeat fallback surfaces in the user's main session: must NOT fire.
     expect(enqueueSystemEvent).not.toHaveBeenCalled();
@@ -151,7 +151,7 @@ describe('EigenFluxNotifier', () => {
     const waitForRun = jest.fn().mockResolvedValue({ status: 'timeout' });
     const runCommandWithTimeout = jest.fn();
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run, waitForRun },
@@ -162,7 +162,7 @@ describe('EigenFluxNotifier', () => {
       createConfig()
     );
 
-    await expect(notifier.deliver('[EIGENFLUX_TEST] payload')).resolves.toBe(false);
+    await expect(notifier.deliver('[ALICEREALM_TEST] payload')).resolves.toBe(false);
     expect(run).toHaveBeenCalledTimes(1);
     expect(waitForRun).toHaveBeenCalledTimes(1);
     // Fallbacks must not run — retrying via CLI would re-run the loop and dup-deliver.
@@ -181,7 +181,7 @@ describe('EigenFluxNotifier', () => {
     const bindSession = jest.fn().mockReturnValue({ list, cancel });
     const runCommandWithTimeout = jest.fn();
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run, waitForRun },
@@ -193,7 +193,7 @@ describe('EigenFluxNotifier', () => {
       createConfig()
     );
 
-    await expect(notifier.deliver('[EIGENFLUX_TEST] payload')).resolves.toBe(false);
+    await expect(notifier.deliver('[ALICEREALM_TEST] payload')).resolves.toBe(false);
     expect(bindSession).toHaveBeenCalledWith({ sessionKey: 'agent:main:feishu:direct:ou_123' });
     expect(waitForRun).toHaveBeenCalledWith({ runId: 'run-stuck', timeoutMs: 480_000 });
     // Cancels the matching run by its taskId — not the unrelated one.
@@ -209,7 +209,7 @@ describe('EigenFluxNotifier', () => {
     const list = jest.fn().mockReturnValue([]);
     const bindSession = jest.fn().mockReturnValue({ list, cancel });
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run, waitForRun },
@@ -220,7 +220,7 @@ describe('EigenFluxNotifier', () => {
       createConfig()
     );
 
-    await expect(notifier.deliver('[EIGENFLUX_TEST] completed payload')).resolves.toBe(true);
+    await expect(notifier.deliver('[ALICEREALM_TEST] completed payload')).resolves.toBe(true);
     expect(waitForRun).toHaveBeenCalledWith({ runId: 'run-completed', timeoutMs: 480_000 });
     expect(bindSession).not.toHaveBeenCalled();
     expect(list).not.toHaveBeenCalled();
@@ -238,7 +238,7 @@ describe('EigenFluxNotifier', () => {
       stderr: '',
     });
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run, waitForRun },
@@ -249,7 +249,7 @@ describe('EigenFluxNotifier', () => {
       createConfig()
     );
 
-    await expect(notifier.deliver('[EIGENFLUX_TEST] payload')).resolves.toBe(true);
+    await expect(notifier.deliver('[ALICEREALM_TEST] payload')).resolves.toBe(true);
     expect(runCommandWithTimeout).toHaveBeenCalledWith(
       expect.arrayContaining(['openclaw', 'agent', '--deliver']),
       { timeoutMs: 15000 }
@@ -263,7 +263,7 @@ describe('EigenFluxNotifier', () => {
       stderr: '',
     });
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           system: { runCommandWithTimeout },
@@ -273,13 +273,13 @@ describe('EigenFluxNotifier', () => {
       createConfig()
     );
 
-    await expect(notifier.deliver('[EIGENFLUX_TEST] payload')).resolves.toBe(true);
+    await expect(notifier.deliver('[ALICEREALM_TEST] payload')).resolves.toBe(true);
     expect(runCommandWithTimeout).toHaveBeenCalledWith(
       [
         'openclaw',
         'agent',
         '--message',
-        '[EIGENFLUX_TEST] payload',
+        '[ALICEREALM_TEST] payload',
         '--agent',
         'main',
         '--deliver',
@@ -295,7 +295,7 @@ describe('EigenFluxNotifier', () => {
   test('falls back to runtime heartbeat when command path is unavailable', async () => {
     const enqueueSystemEvent = jest.fn().mockReturnValue(true);
     const requestHeartbeatNow = jest.fn();
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           system: {
@@ -308,8 +308,8 @@ describe('EigenFluxNotifier', () => {
       createConfig()
     );
 
-    await expect(notifier.deliver('[EIGENFLUX_TEST] payload')).resolves.toBe(true);
-    expect(enqueueSystemEvent).toHaveBeenCalledWith('[EIGENFLUX_TEST] payload', {
+    await expect(notifier.deliver('[ALICEREALM_TEST] payload')).resolves.toBe(true);
+    expect(enqueueSystemEvent).toHaveBeenCalledWith('[ALICEREALM_TEST] payload', {
       sessionKey: 'agent:main:feishu:direct:ou_123',
       deliveryContext: {
         channel: 'feishu',
@@ -317,7 +317,7 @@ describe('EigenFluxNotifier', () => {
       },
     });
     expect(requestHeartbeatNow).toHaveBeenCalledWith({
-      reason: 'plugin:eigenflux',
+      reason: 'plugin:alicerealm',
       coalesceMs: 0,
       agentId: 'main',
       sessionKey: 'agent:main:feishu:direct:ou_123',
@@ -328,7 +328,7 @@ describe('EigenFluxNotifier', () => {
     // The feed poller's config carries no reply target; without recovery the
     // enqueued system event would have deliveryContext=none and the main
     // session's heartbeat reply would never reach the user.
-    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eigenflux-main-session-'));
+    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alicerealm-main-session-'));
     const sessionStorePath = path.join(stateDir, 'sessions.json');
     fs.writeFileSync(sessionStorePath, JSON.stringify({}), 'utf-8');
 
@@ -342,7 +342,7 @@ describe('EigenFluxNotifier', () => {
 
     const enqueueSystemEvent = jest.fn().mockReturnValue(true);
     const requestHeartbeatNow = jest.fn();
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           system: { enqueueSystemEvent, requestHeartbeatNow },
@@ -359,13 +359,13 @@ describe('EigenFluxNotifier', () => {
       }
     );
 
-    await expect(notifier.deliverToMainSession('[EIGENFLUX_TEST] payload')).resolves.toBe(true);
+    await expect(notifier.deliverToMainSession('[ALICEREALM_TEST] payload')).resolves.toBe(true);
     // The event must be enqueued under the CANONICAL session key from the
     // remembered route, NOT the config alias "main": the host bridge does not
     // canonicalize on enqueue, while every consumer (heartbeat runner,
     // user-message runs) drains the canonical key — an alias-keyed event would
     // never be drained. Reply target is borrowed from the same route.
-    expect(enqueueSystemEvent).toHaveBeenCalledWith('[EIGENFLUX_TEST] payload', {
+    expect(enqueueSystemEvent).toHaveBeenCalledWith('[ALICEREALM_TEST] payload', {
       sessionKey: 'agent:main:feishu:direct:ou_123',
       deliveryContext: {
         channel: 'feishu',
@@ -374,7 +374,7 @@ describe('EigenFluxNotifier', () => {
       },
     });
     expect(requestHeartbeatNow).toHaveBeenCalledWith({
-      reason: 'plugin:eigenflux',
+      reason: 'plugin:alicerealm',
       coalesceMs: 0,
       agentId: 'main',
       sessionKey: 'agent:main:feishu:direct:ou_123',
@@ -385,7 +385,7 @@ describe('EigenFluxNotifier', () => {
 
   describe('isMainRouteBusy', () => {
     function createBusyProbe(runtime: Record<string, unknown>) {
-      return new EigenFluxNotifier(
+      return new AliceRealmNotifier(
         createApi({ runtime: runtime as unknown as OpenClawPluginApi['runtime'] }),
         createLogger(),
         createConfig()
@@ -433,7 +433,7 @@ describe('EigenFluxNotifier', () => {
   });
 
   test('prefers direct session over newer group session when scanning session store', async () => {
-    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eigenflux-session-store-'));
+    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alicerealm-session-store-'));
     const sessionStorePath = path.join(stateDir, 'sessions.json');
     fs.writeFileSync(
       sessionStorePath,
@@ -463,7 +463,7 @@ describe('EigenFluxNotifier', () => {
     );
 
     const run = jest.fn().mockResolvedValue({ runId: 'run-external-session' });
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run },
@@ -480,20 +480,20 @@ describe('EigenFluxNotifier', () => {
       }
     );
 
-    await expect(notifier.deliver('[EIGENFLUX_TEST] payload')).resolves.toBe(true);
+    await expect(notifier.deliver('[ALICEREALM_TEST] payload')).resolves.toBe(true);
     expect(run).toHaveBeenCalledWith({
       sessionKey: 'agent:main:feishu:direct:ou_older',
-      message: '[EIGENFLUX_TEST] payload',
+      message: '[ALICEREALM_TEST] payload',
       deliver: true,
       idempotencyKey: expect.any(String),
-      lane: 'eigenflux-bg',
+      lane: 'alicerealm-bg',
     });
 
     fs.rmSync(stateDir, { recursive: true, force: true });
   });
 
   test('normalizes explicit reply targets from session store before CLI fallback', async () => {
-    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eigenflux-session-store-'));
+    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alicerealm-session-store-'));
     const sessionStorePath = path.join(stateDir, 'sessions.json');
     fs.writeFileSync(
       sessionStorePath,
@@ -516,7 +516,7 @@ describe('EigenFluxNotifier', () => {
       stderr: '',
     });
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           system: { runCommandWithTimeout },
@@ -532,13 +532,13 @@ describe('EigenFluxNotifier', () => {
       }
     );
 
-    await expect(notifier.deliver('[EIGENFLUX_TEST] payload')).resolves.toBe(true);
+    await expect(notifier.deliver('[ALICEREALM_TEST] payload')).resolves.toBe(true);
     expect(runCommandWithTimeout).toHaveBeenCalledWith(
       [
         'openclaw',
         'agent',
         '--message',
-        '[EIGENFLUX_TEST] payload',
+        '[ALICEREALM_TEST] payload',
         '--agent',
         'main',
         '--deliver',
@@ -558,7 +558,7 @@ describe('EigenFluxNotifier', () => {
   test('remembers the resolved route after a successful delivery', async () => {
     const runtimeStoreMock = { get: jest.fn(), set: jest.fn() };
     const run = jest.fn().mockResolvedValue({ runId: 'run-subagent-memory' });
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run },
@@ -568,16 +568,16 @@ describe('EigenFluxNotifier', () => {
       {
         ...createConfig(),
         store: runtimeStoreMock,
-        serverName: 'eigenflux',
+        serverName: 'alicerealm',
       }
     );
 
-    await expect(notifier.deliver('[EIGENFLUX_TEST] payload')).resolves.toBe(true);
+    await expect(notifier.deliver('[ALICEREALM_TEST] payload')).resolves.toBe(true);
 
     expect(writeStoredNotificationRouteMock).toHaveBeenCalledTimes(1);
     const [store, server, route] = writeStoredNotificationRouteMock.mock.calls[0];
     expect(store).toBe(runtimeStoreMock);
-    expect(server).toBe('eigenflux');
+    expect(server).toBe('alicerealm');
     expect(route).toMatchObject({
       sessionKey: 'agent:main:feishu:direct:ou_123',
       agentId: 'main',
@@ -596,7 +596,7 @@ describe('EigenFluxNotifier', () => {
       updatedAt: 1,
     });
 
-    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eigenflux-retry-'));
+    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alicerealm-retry-'));
     const sessionStorePath = path.join(stateDir, 'sessions.json');
     fs.writeFileSync(
       sessionStorePath,
@@ -618,7 +618,7 @@ describe('EigenFluxNotifier', () => {
       .mockRejectedValueOnce(new Error('session expired'))
       .mockResolvedValueOnce({ runId: 'run-fresh' });
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run },
@@ -627,8 +627,8 @@ describe('EigenFluxNotifier', () => {
       createLogger(),
       {
         ...createConfig(),
-        eigenfluxBin: 'eigenflux',
-        serverName: 'eigenflux',
+        alicerealmBin: 'alicerealm',
+        serverName: 'alicerealm',
         sessionKey: 'main',
         replyChannel: undefined,
         replyTo: undefined,
@@ -637,7 +637,7 @@ describe('EigenFluxNotifier', () => {
       }
     );
 
-    await expect(notifier.deliver('[EIGENFLUX_TEST] payload')).resolves.toBe(true);
+    await expect(notifier.deliver('[ALICEREALM_TEST] payload')).resolves.toBe(true);
 
     expect(run).toHaveBeenCalledTimes(2);
     expect(run.mock.calls[0][0].sessionKey).toBe('agent:main:feishu:direct:ou_stale');
@@ -661,7 +661,7 @@ describe('EigenFluxNotifier', () => {
     });
 
     const run = jest.fn().mockResolvedValue({ runId: 'run-subagent-main' });
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run },
@@ -670,8 +670,8 @@ describe('EigenFluxNotifier', () => {
       createLogger(),
       {
         ...createConfig(),
-        eigenfluxBin: 'eigenflux',
-        serverName: 'eigenflux',
+        alicerealmBin: 'alicerealm',
+        serverName: 'alicerealm',
         sessionKey: 'main',
         agentId: 'main',
         replyChannel: undefined,
@@ -680,7 +680,7 @@ describe('EigenFluxNotifier', () => {
       }
     );
 
-    await expect(notifier.deliver('[EIGENFLUX_TEST] payload')).resolves.toBe(true);
+    await expect(notifier.deliver('[ALICEREALM_TEST] payload')).resolves.toBe(true);
 
     expect(writeStoredNotificationRouteMock).not.toHaveBeenCalled();
     expect(run).toHaveBeenCalledWith(
@@ -697,7 +697,7 @@ describe('EigenFluxNotifier', () => {
       } as any,
     });
 
-    const notifier = new EigenFluxNotifier(api, createLogger(), {
+    const notifier = new AliceRealmNotifier(api, createLogger(), {
       ...createConfig(),
       sessionKey: 'agent:main:main',
       replyChannel: 'feishu',
@@ -730,7 +730,7 @@ describe('EigenFluxNotifier', () => {
       } as any,
     });
 
-    const notifier = new EigenFluxNotifier(api, createLogger(), {
+    const notifier = new AliceRealmNotifier(api, createLogger(), {
       ...createConfig(),
       sessionKey: 'agent:main:heartbeat',
       replyChannel: 'feishu',
@@ -759,7 +759,7 @@ describe('EigenFluxNotifier', () => {
       } as any,
     });
 
-    const notifier = new EigenFluxNotifier(api, createLogger(), {
+    const notifier = new AliceRealmNotifier(api, createLogger(), {
       ...createConfig(),
       sessionKey: 'agent:main:main',
       replyChannel: undefined,
@@ -783,7 +783,7 @@ describe('EigenFluxNotifier', () => {
     const run = jest.fn().mockResolvedValue({ runId: 'run-oneshot' });
     const deleteSession = jest.fn().mockResolvedValue(undefined);
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run, deleteSession },
@@ -794,15 +794,15 @@ describe('EigenFluxNotifier', () => {
     );
 
     await expect(
-      notifier.deliver('[EIGENFLUX_FEED_PAYLOAD] test', {
-        targetSessionKey: 'eigenflux:feed:eigenflux',
+      notifier.deliver('[ALICEREALM_FEED_PAYLOAD] test', {
+        targetSessionKey: 'alicerealm:feed:alicerealm',
       })
     ).resolves.toBe(true);
 
     // sessionKey should start with the prefix but have a random suffix
     const callArgs = run.mock.calls[0]?.[0];
-    expect(callArgs.sessionKey).toMatch(/^eigenflux:feed:eigenflux:\d+-[a-f0-9]{8}$/);
-    expect(callArgs.message).toBe('[EIGENFLUX_FEED_PAYLOAD] test');
+    expect(callArgs.sessionKey).toMatch(/^alicerealm:feed:alicerealm:\d+-[a-f0-9]{8}$/);
+    expect(callArgs.message).toBe('[ALICEREALM_FEED_PAYLOAD] test');
     expect(callArgs.deliver).toBe(true);
   });
 
@@ -812,15 +812,15 @@ describe('EigenFluxNotifier', () => {
       status: 'error', error: 'Session changed while starting work. Retry. | SESSION_WORK_START_CHANGED',
     });
     const enqueueSystemEvent = jest.fn();
-    const notifier = new EigenFluxNotifier(createApi({ runtime: {
+    const notifier = new AliceRealmNotifier(createApi({ runtime: {
       subagent: { run, waitForRun }, system: { enqueueSystemEvent },
     } as unknown as OpenClawPluginApi['runtime'] }), createLogger(), createConfig());
 
-    await expect(notifier.deliver('[EIGENFLUX_FEED_PAYLOAD] test', {
-      targetSessionKey: 'eigenflux:feed:eigenflux', lane: 'subagent',
+    await expect(notifier.deliver('[ALICEREALM_FEED_PAYLOAD] test', {
+      targetSessionKey: 'alicerealm:feed:alicerealm', lane: 'subagent',
     })).resolves.toBe(false);
     expect(run).toHaveBeenCalledTimes(1);
-    expect(run.mock.calls[0][0].sessionKey).toMatch(/^eigenflux:feed:eigenflux:/);
+    expect(run.mock.calls[0][0].sessionKey).toMatch(/^alicerealm:feed:alicerealm:/);
     expect(enqueueSystemEvent).not.toHaveBeenCalled();
   });
 
@@ -828,7 +828,7 @@ describe('EigenFluxNotifier', () => {
     const run = jest.fn().mockResolvedValue({ runId: 'run-pm' });
     const deleteSession = jest.fn().mockResolvedValue(undefined);
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run, deleteSession },
@@ -839,18 +839,18 @@ describe('EigenFluxNotifier', () => {
     );
 
     await expect(
-      notifier.deliver('[EIGENFLUX_MSG_PAYLOAD] test', {
-        persistentSessionKey: 'eigenflux:pm:server:conversation',
-        lane: 'eigenflux-pm:server:conversation',
+      notifier.deliver('[ALICEREALM_MSG_PAYLOAD] test', {
+        persistentSessionKey: 'alicerealm:pm:server:conversation',
+        lane: 'alicerealm-pm:server:conversation',
       })
     ).resolves.toBe(true);
 
     expect(run).toHaveBeenCalledWith({
-      sessionKey: 'eigenflux:pm:server:conversation',
-      message: '[EIGENFLUX_MSG_PAYLOAD] test',
+      sessionKey: 'alicerealm:pm:server:conversation',
+      message: '[ALICEREALM_MSG_PAYLOAD] test',
       deliver: true,
       idempotencyKey: expect.any(String),
-      lane: 'eigenflux-pm:server:conversation',
+      lane: 'alicerealm-pm:server:conversation',
     });
     expect(deleteSession).not.toHaveBeenCalled();
     expect(writeStoredNotificationRouteMock).not.toHaveBeenCalled();
@@ -860,7 +860,7 @@ describe('EigenFluxNotifier', () => {
     const run = jest.fn().mockResolvedValue({ runId: 'run-cleanup' });
     const deleteSession = jest.fn().mockResolvedValue(undefined);
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run, deleteSession },
@@ -870,13 +870,13 @@ describe('EigenFluxNotifier', () => {
       createConfig()
     );
 
-    await notifier.deliver('[EIGENFLUX_FEED_PAYLOAD] test', {
-      targetSessionKey: 'eigenflux:feed:eigenflux',
+    await notifier.deliver('[ALICEREALM_FEED_PAYLOAD] test', {
+      targetSessionKey: 'alicerealm:feed:alicerealm',
     });
 
     expect(deleteSession).toHaveBeenCalledTimes(1);
     const deletedKey = deleteSession.mock.calls[0]?.[0]?.sessionKey;
-    expect(deletedKey).toMatch(/^eigenflux:feed:eigenflux:\d+-[a-f0-9]{8}$/);
+    expect(deletedKey).toMatch(/^alicerealm:feed:alicerealm:\d+-[a-f0-9]{8}$/);
     expect(deleteSession.mock.calls[0]?.[0]?.deleteTranscript).toBe(true);
   });
 
@@ -884,7 +884,7 @@ describe('EigenFluxNotifier', () => {
     // No subagent available — delivery fails
     const deleteSession = jest.fn().mockResolvedValue(undefined);
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { deleteSession },
@@ -894,8 +894,8 @@ describe('EigenFluxNotifier', () => {
       createConfig()
     );
 
-    const result = await notifier.deliver('[EIGENFLUX_FEED_PAYLOAD] test', {
-      targetSessionKey: 'eigenflux:feed:eigenflux',
+    const result = await notifier.deliver('[ALICEREALM_FEED_PAYLOAD] test', {
+      targetSessionKey: 'alicerealm:feed:alicerealm',
     });
 
     expect(result).toBe(false);
@@ -907,7 +907,7 @@ describe('EigenFluxNotifier', () => {
     const run = jest.fn().mockResolvedValue({ runId: 'run-no-remember' });
     const deleteSession = jest.fn().mockResolvedValue(undefined);
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run, deleteSession },
@@ -917,8 +917,8 @@ describe('EigenFluxNotifier', () => {
       createConfig()
     );
 
-    await notifier.deliver('[EIGENFLUX_FEED_PAYLOAD] test', {
-      targetSessionKey: 'eigenflux:feed:eigenflux',
+    await notifier.deliver('[ALICEREALM_FEED_PAYLOAD] test', {
+      targetSessionKey: 'alicerealm:feed:alicerealm',
     });
 
     expect(writeStoredNotificationRouteMock).not.toHaveBeenCalled();
@@ -930,7 +930,7 @@ describe('EigenFluxNotifier', () => {
     const requestHeartbeatNow = jest.fn();
     const deleteSession = jest.fn().mockResolvedValue(undefined);
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { deleteSession },
@@ -945,8 +945,8 @@ describe('EigenFluxNotifier', () => {
       createConfig()
     );
 
-    await notifier.deliver('[EIGENFLUX_FEED_PAYLOAD] test', {
-      targetSessionKey: 'eigenflux:feed:eigenflux',
+    await notifier.deliver('[ALICEREALM_FEED_PAYLOAD] test', {
+      targetSessionKey: 'alicerealm:feed:alicerealm',
     });
 
     expect(enqueueSystemEvent).not.toHaveBeenCalled();
@@ -956,7 +956,7 @@ describe('EigenFluxNotifier', () => {
   test('gracefully degrades when deleteSession is not available on runtime', async () => {
     const run = jest.fn().mockResolvedValue({ runId: 'run-no-delete' });
     // subagent has run but NO deleteSession
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run },
@@ -966,8 +966,8 @@ describe('EigenFluxNotifier', () => {
       createConfig()
     );
 
-    const result = await notifier.deliver('[EIGENFLUX_FEED_PAYLOAD] test', {
-      targetSessionKey: 'eigenflux:feed:eigenflux',
+    const result = await notifier.deliver('[ALICEREALM_FEED_PAYLOAD] test', {
+      targetSessionKey: 'alicerealm:feed:alicerealm',
     });
 
     // Delivery should succeed even without deleteSession
@@ -979,7 +979,7 @@ describe('EigenFluxNotifier', () => {
     const run = jest.fn().mockResolvedValue({ runId: 'run-delete-throws' });
     const deleteSession = jest.fn().mockRejectedValue(new Error('delete RPC failed'));
 
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({
         runtime: {
           subagent: { run, deleteSession },
@@ -990,8 +990,8 @@ describe('EigenFluxNotifier', () => {
     );
 
     // Delivery should still return true — deleteSession failure is swallowed
-    const result = await notifier.deliver('[EIGENFLUX_FEED_PAYLOAD] test', {
-      targetSessionKey: 'eigenflux:feed:eigenflux',
+    const result = await notifier.deliver('[ALICEREALM_FEED_PAYLOAD] test', {
+      targetSessionKey: 'alicerealm:feed:alicerealm',
     });
 
     expect(result).toBe(true);
@@ -1031,14 +1031,14 @@ describe('EigenFluxNotifier', () => {
           expect(entry?.delivery?.context ?? entry?.deliveryContext).toMatchObject({ channel, to: 'target', threadId: id });
           return { runId: 'thread-run' };
         });
-        const notifier = new EigenFluxNotifier(createApi({ runtime: {
+        const notifier = new AliceRealmNotifier(createApi({ runtime: {
           subagent: { run }, agent: { session: { ...store, listSessionEntries } },
         } as any }), createLogger(), {
           sessionKey: 'main', agentId: 'main', sessionStorePath: '/tmp/sessions/main.json', openclawCliBin: 'openclaw',
         });
-        await expect(notifier.deliver('Feed', { targetSessionKey: 'eigenflux:feed:test' })).resolves.toBe(true);
+        await expect(notifier.deliver('Feed', { targetSessionKey: 'alicerealm:feed:test' })).resolves.toBe(true);
         const key = run.mock.calls[0][0].sessionKey;
-        expect(key).toMatch(/^agent:main:eigenflux:feed:test:/);
+        expect(key).toMatch(/^agent:main:alicerealm:feed:test:/);
         expect(listSessionEntries).toHaveBeenCalledWith({ agentId: 'main', storePath: '/tmp/sessions/main.json', readOnly: true });
         if (host === 'new') {
           expect(store.patchSessionEntry).not.toHaveBeenCalled();
@@ -1050,7 +1050,7 @@ describe('EigenFluxNotifier', () => {
           delivery: { context: { channel, to: 'target', accountId: 'default' } },
           deliveryContext: { channel, to: 'target', accountId: 'default' },
         });
-        await expect(notifier.deliver('Feed', { targetSessionKey: 'eigenflux:feed:test' })).resolves.toBe(false);
+        await expect(notifier.deliver('Feed', { targetSessionKey: 'alicerealm:feed:test' })).resolves.toBe(false);
         expect(run).toHaveBeenCalledTimes(1);
       }
     });
@@ -1075,12 +1075,12 @@ describe('EigenFluxNotifier', () => {
       });
       const logger = createLogger();
       const info = jest.spyOn(logger, 'info');
-      const notifier = new EigenFluxNotifier(createApi({
+      const notifier = new AliceRealmNotifier(createApi({
         config: { session: { store: 'sessions' } } as any,
         runtime: { subagent: { run }, agent: { session: store } } as any,
       }), logger, { ...createConfig(), replyAccountId: 'default' });
 
-      await expect(notifier.deliver('payload', { targetSessionKey: 'eigenflux:feed:eigenflux' })).resolves.toBe(true);
+      await expect(notifier.deliver('payload', { targetSessionKey: 'alicerealm:feed:alicerealm' })).resolves.toBe(true);
       expect(store.resolveStorePath).toHaveBeenCalledWith('sessions', { agentId: 'main' });
       const sessionKey = run.mock.calls[0][0].sessionKey;
       if (host === 'new') {
@@ -1110,13 +1110,13 @@ describe('EigenFluxNotifier', () => {
       const logger = createLogger();
       const error = jest.spyOn(logger, 'error');
       const info = jest.spyOn(logger, 'info');
-      const notifier = new EigenFluxNotifier(createApi({ runtime: {
+      const notifier = new AliceRealmNotifier(createApi({ runtime: {
         subagent: { run, waitForRun: jest.fn().mockResolvedValue({ status: 'ok' }) },
         agent: { session: store },
       } as any }), logger, createConfig());
       const deliver = () => kind === 'order'
         ? notifier.deliverOrder('order', { key: 'order-1', receipt: { status: 'queued' }, checkpoint })
-        : notifier.deliver(kind, { persistentSessionKey: `agent:main:eigenflux:${kind}:1` });
+        : notifier.deliver(kind, { persistentSessionKey: `agent:main:alicerealm:${kind}:1` });
 
       await expect(deliver()).resolves.toBe(false);
       expect(run).not.toHaveBeenCalled();
@@ -1137,20 +1137,20 @@ describe('EigenFluxNotifier', () => {
           sessionStoreSdkMock.deliveryContextFromSession = jest.fn(entry => entry?.delivery?.context);
         }
         const run = jest.fn();
-        const notifier = new EigenFluxNotifier(createApi({ runtime: {
+        const notifier = new AliceRealmNotifier(createApi({ runtime: {
           subagent: { run }, agent: failure === 'missing API' ? undefined : { session: store },
         } as any }), createLogger(), createConfig());
-        await expect(notifier.deliver('payload', { targetSessionKey: 'eigenflux:feed:test' })).resolves.toBe(false);
+        await expect(notifier.deliver('payload', { targetSessionKey: 'alicerealm:feed:test' })).resolves.toBe(false);
         expect(run).not.toHaveBeenCalled();
       }
     );
 
     test('silent isolated runs do not require a delivery target or store', async () => {
       const run = jest.fn().mockResolvedValue({ runId: 'silent' });
-      const notifier = new EigenFluxNotifier(createApi({ runtime: {
+      const notifier = new AliceRealmNotifier(createApi({ runtime: {
         subagent: { run }, agent: undefined,
       } as any }), createLogger(), createConfig());
-      await expect(notifier.deliver('payload', { targetSessionKey: 'eigenflux:profile:test', silent: true })).resolves.toBe(true);
+      await expect(notifier.deliver('payload', { targetSessionKey: 'alicerealm:profile:test', silent: true })).resolves.toBe(true);
       expect(run).toHaveBeenCalledWith(expect.objectContaining({ deliver: false }));
     });
   });
@@ -1161,7 +1161,7 @@ test('Feed retains the original run when timeout cancellation is unavailable', a
   jest.useFakeTimers();
   const run=jest.fn().mockResolvedValue({runId:'feed-original'});
   const waitForRun=jest.fn().mockResolvedValueOnce({status:'timeout'}).mockResolvedValueOnce({status:'ok'});
-  const notifier=new EigenFluxNotifier(createApi({runtime:{subagent:{run,waitForRun}} as any}),createLogger(),createConfig());
+  const notifier=new AliceRealmNotifier(createApi({runtime:{subagent:{run,waitForRun}} as any}),createLogger(),createConfig());
   let done=false;
   const delivery=notifier.deliver('same payload',{lane:'subagent'}).then(result=>{done=true;return result;});
   try {
@@ -1179,7 +1179,7 @@ test('shutdown ends Feed observation without resubmitting an unresolved run', as
   jest.useFakeTimers();
   const run=jest.fn().mockResolvedValue({runId:'feed-shutdown'});
   const waitForRun=jest.fn().mockReturnValue(new Promise(()=>{}));
-  const notifier=new EigenFluxNotifier(createApi({runtime:{subagent:{run,waitForRun}} as any}),createLogger(),createConfig());
+  const notifier=new AliceRealmNotifier(createApi({runtime:{subagent:{run,waitForRun}} as any}),createLogger(),createConfig());
   const delivery=notifier.deliver('same payload',{lane:'subagent'});
   try {
     await jest.advanceTimersByTimeAsync(0);
@@ -1205,7 +1205,7 @@ describe('Feed run observation bound', () => {
     const spies = {info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn()};
     const run = jest.fn().mockResolvedValue({runId: 'feed-stuck'});
     const waitForRun = timedOutWait();
-    const notifier = new EigenFluxNotifier(
+    const notifier = new AliceRealmNotifier(
       createApi({runtime: {subagent: {run, waitForRun}, ...(tasks ? {tasks} : {})} as any}),
       new Logger(spies),
       createConfig()
@@ -1229,7 +1229,7 @@ describe('Feed run observation bound', () => {
       // stuck run is never resubmitted.
       run.mockResolvedValue({runId: 'pm-next'});
       waitForRun.mockImplementation(async () => ({status: 'ok'}) as any);
-      await expect(notifier.deliver('pm', {persistentSessionKey: 'agent:main:eigenflux:pm:1'})).resolves.toBe(true);
+      await expect(notifier.deliver('pm', {persistentSessionKey: 'agent:main:alicerealm:pm:1'})).resolves.toBe(true);
       expect(run.mock.calls.filter(([params]) => params.message === 'same payload')).toHaveLength(1);
     } finally { jest.useRealTimers(); }
   });
@@ -1241,7 +1241,7 @@ describe('Feed run observation bound', () => {
       .mockResolvedValueOnce({status: 'timeout'})
       .mockRejectedValueOnce(new Error('gateway unavailable'))
       .mockResolvedValueOnce({status: 'ok'});
-    const notifier = new EigenFluxNotifier(createApi({runtime: {subagent: {run, waitForRun}} as any}), createLogger(), createConfig());
+    const notifier = new AliceRealmNotifier(createApi({runtime: {subagent: {run, waitForRun}} as any}), createLogger(), createConfig());
     const delivery = notifier.deliver('same payload', {lane: 'subagent'});
     try {
       await jest.advanceTimersByTimeAsync(2 * PAUSE_MS);

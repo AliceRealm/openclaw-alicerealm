@@ -1,8 +1,8 @@
 /**
- * Credentials loader for the EigenFlux auth token.
+ * Credentials loader for the AliceRealm auth token.
  *
- * Reads credentials from the eigenflux CLI's data directory:
- * ~/.eigenflux/servers/{serverName}/credentials.json
+ * Reads credentials from the alicerealm CLI's data directory:
+ * ~/.alicerealm/servers/{serverName}/credentials.json
  */
 
 import * as fs from 'fs';
@@ -10,7 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { Logger } from './logger';
 
-interface EigenFluxCredentials {
+interface AliceRealmCredentials {
   access_token: string;
   email?: string;
   agent_id?: string;
@@ -37,30 +37,30 @@ export class CredentialsLoader {
   private readonly credentialsPath: string;
   private readonly credentialsDir: string;
 
-  constructor(logger: Logger, eigenfluxHome: string, serverName: string) {
+  constructor(logger: Logger, alicerealmHome: string, serverName: string) {
     this.logger = logger;
-    this.credentialsDir = path.join(eigenfluxHome, 'servers', serverName);
+    this.credentialsDir = path.join(alicerealmHome, 'servers', serverName);
     this.credentialsPath = path.join(this.credentialsDir, 'credentials.json');
-    this.migrateFromLegacyPath(eigenfluxHome, serverName);
+    this.migrateFromLegacyPath(alicerealmHome, serverName);
   }
 
   /**
-   * One-time migration: if credentials exist at the legacy ~/.eigenflux path
+   * One-time migration: if credentials exist at the legacy ~/.alicerealm path
    * but not at the current path, copy them over so users don't need to re-auth
    * after the storage location changes (e.g. sandbox environments).
    *
    * Note: this only works within the same session. In sandbox environments where
-   * ~/.eigenflux is cleared between sessions, the legacy path will already be
+   * ~/.alicerealm is cleared between sessions, the legacy path will already be
    * empty on the next session start — migration won't find anything to copy.
-   * The real fix is ensuring eigenfluxHome itself points to a persistent path.
+   * The real fix is ensuring alicerealmHome itself points to a persistent path.
    */
-  private migrateFromLegacyPath(eigenfluxHome: string, serverName: string): void {
+  private migrateFromLegacyPath(alicerealmHome: string, serverName: string): void {
     if (fs.existsSync(this.credentialsPath)) {
       return; // current path already has credentials, nothing to migrate
     }
 
-    const legacyHome = path.join(os.homedir(), '.eigenflux');
-    if (eigenfluxHome === legacyHome) {
+    const legacyHome = path.join(os.homedir(), '.alicerealm');
+    if (alicerealmHome === legacyHome) {
       return; // same path, no migration needed
     }
 
@@ -98,7 +98,7 @@ export class CredentialsLoader {
     if (fs.existsSync(this.credentialsPath)) {
       try {
         const content = fs.readFileSync(this.credentialsPath, 'utf-8');
-        const credentials: EigenFluxCredentials = JSON.parse(content);
+        const credentials: AliceRealmCredentials = JSON.parse(content);
 
         if (credentials.access_token) {
           // Trust server-side sliding expiration: the server extends the session
@@ -136,7 +136,7 @@ export class CredentialsLoader {
       return;
     }
 
-    const credentials: EigenFluxCredentials = {
+    const credentials: AliceRealmCredentials = {
       access_token: token,
       email,
       expires_at: expiresAt,

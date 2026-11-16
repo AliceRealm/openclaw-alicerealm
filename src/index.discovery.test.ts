@@ -9,24 +9,24 @@ jest.mock('./config', () => ({
   ...jest.requireActual('./config'),
   discoverServers: (...args: unknown[]) => discoverServersMock(...args),
   getInstalledCliVersion: (...args: unknown[]) => getInstalledCliVersionMock(...args),
-  resolveEigenfluxHome: () => '/tmp/eigenflux-discovery-tests/.eigenflux',
+  resolveAliceRealmHome: () => '/tmp/alicerealm-discovery-tests/.alicerealm',
 }));
-jest.mock('./cli-executor', () => ({ execEigenflux: jest.fn().mockResolvedValue({ kind: 'success' }) }));
+jest.mock('./cli-executor', () => ({ execAliceRealm: jest.fn().mockResolvedValue({ kind: 'success' }) }));
 
 const pollStart = jest.fn();
 const pollStop = jest.fn();
 jest.mock('./polling-client', () => ({
-  EigenFluxPollingClient: jest.fn().mockImplementation(() => ({ start: pollStart, stop: pollStop })),
+  AliceRealmPollingClient: jest.fn().mockImplementation(() => ({ start: pollStart, stop: pollStop })),
 }));
 const streamStart = jest.fn();
 const streamStop = jest.fn();
 jest.mock('./stream-client', () => ({
-  EigenFluxStreamClient: jest.fn().mockImplementation(() => ({ start: streamStart, stop: streamStop })),
+  AliceRealmStreamClient: jest.fn().mockImplementation(() => ({ start: streamStart, stop: streamStop })),
 }));
 const profileStart = jest.fn();
 const profileStop = jest.fn();
 jest.mock('./profile-refresher', () => ({
-  EigenFluxProfileRefresher: jest.fn().mockImplementation(() => ({ start: profileStart, stop: profileStop })),
+  AliceRealmProfileRefresher: jest.fn().mockImplementation(() => ({ start: profileStart, stop: profileStop })),
 }));
 const orderStart = jest.fn();
 const orderStop = jest.fn();
@@ -40,14 +40,14 @@ jest.mock('./feedback-flush-loop', () => ({
 }));
 const deliver = jest.fn();
 jest.mock('./notifier', () => ({
-  EigenFluxNotifier: jest.fn().mockImplementation(() => ({
+  AliceRealmNotifier: jest.fn().mockImplementation(() => ({
     deliver, stopFeedObservation: jest.fn(), drainPendingCleanups: jest.fn().mockResolvedValue(undefined),
   })),
 }));
 
 import plugin from './index';
 
-const configured = { kind: 'ok', servers: [{ name: 'eigenflux', endpoint: 'https://example.invalid', current: true }] };
+const configured = { kind: 'ok', servers: [{ name: 'alicerealm', endpoint: 'https://example.invalid', current: true }] };
 const retryable = { kind: 'error', error: 'CLI timed out', retryable: true };
 
 function deferred<T>() {
@@ -126,7 +126,7 @@ describe('discovery service lifecycle', () => {
 
   test.each([
     ['empty configuration', { kind: 'ok', servers: [] }],
-    ['missing CLI', { kind: 'not_installed', bin: '/missing/eigenflux' }],
+    ['missing CLI', { kind: 'not_installed', bin: '/missing/alicerealm' }],
     ['authentication required', { kind: 'error', error: 'requires authentication', retryable: false }],
   ])('does not automatically scan or repeatedly notify for %s', async (_, discovery) => {
     discoverServersMock.mockResolvedValue(discovery);
@@ -198,7 +198,7 @@ describe('discovery service lifecycle', () => {
     const { service } = register();
     await service.start();
     const cleanup = deferred<void>();
-    const notifier = (require('./notifier').EigenFluxNotifier as jest.Mock).mock.results[0].value;
+    const notifier = (require('./notifier').AliceRealmNotifier as jest.Mock).mock.results[0].value;
     notifier.drainPendingCleanups.mockReturnValueOnce(cleanup.promise);
     const stopping = service.stop();
     const restarting = service.start();

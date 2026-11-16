@@ -6,10 +6,10 @@ jest.mock('openclaw/plugin-sdk/plugin-entry', () => ({
   buildJsonPluginConfigSchema: (schema: any) => schema,
 }));
 
-// Intercept the CLI subprocess so no real `eigenflux` is spawned.
-const execEigenfluxMock = jest.fn();
+// Intercept the CLI subprocess so no real `alicerealm` is spawned.
+const execAliceRealmMock = jest.fn();
 jest.mock('./cli-executor', () => ({
-  execEigenflux: (...args: any[]) => execEigenfluxMock(...args),
+  execAliceRealm: (...args: any[]) => execAliceRealmMock(...args),
 }));
 
 import { syncPluginSkills } from './index';
@@ -25,18 +25,18 @@ function makeLogger(): Logger {
 }
 
 describe('syncPluginSkills (startup skill auto-update)', () => {
-  beforeEach(() => execEigenfluxMock.mockReset());
+  beforeEach(() => execAliceRealmMock.mockReset());
 
   it('syncs from R2 into the OpenClaw host skills dir and refreshes the snapshot', async () => {
-    execEigenfluxMock.mockResolvedValue({ kind: 'success', data: undefined });
+    execAliceRealmMock.mockResolvedValue({ kind: 'success', data: undefined });
     const logger = makeLogger();
     const refreshSnapshot = jest.fn();
 
-    await syncPluginSkills('eigenflux', logger, refreshSnapshot);
+    await syncPluginSkills('alicerealm', logger, refreshSnapshot);
 
-    expect(execEigenfluxMock).toHaveBeenCalledTimes(1);
-    const [bin, args, opts] = execEigenfluxMock.mock.calls[0];
-    expect(bin).toBe('eigenflux');
+    expect(execAliceRealmMock).toHaveBeenCalledTimes(1);
+    const [bin, args, opts] = execAliceRealmMock.mock.calls[0];
+    expect(bin).toBe('alicerealm');
     expect(args).toEqual(['skills', 'sync', '--if-stale', '--quiet', '--host', 'openclaw']);
     expect(args).not.toContain('--into');
     expect(opts).toMatchObject({ parseJson: false });
@@ -45,7 +45,7 @@ describe('syncPluginSkills (startup skill auto-update)', () => {
   });
 
   it('never throws and logs a warning when the CLI returns a non-success kind', async () => {
-    execEigenfluxMock.mockResolvedValue({
+    execAliceRealmMock.mockResolvedValue({
       kind: 'error',
       error: new Error('boom'),
       exitCode: 1,
@@ -54,17 +54,17 @@ describe('syncPluginSkills (startup skill auto-update)', () => {
     const logger = makeLogger();
     const refreshSnapshot = jest.fn();
 
-    await expect(syncPluginSkills('eigenflux', logger, refreshSnapshot)).resolves.toBeUndefined();
+    await expect(syncPluginSkills('alicerealm', logger, refreshSnapshot)).resolves.toBeUndefined();
     expect(refreshSnapshot).not.toHaveBeenCalled();
     expect((logger.warn as jest.Mock)).toHaveBeenCalled();
   });
 
-  it('never throws when execEigenflux itself rejects', async () => {
-    execEigenfluxMock.mockRejectedValue(new Error('spawn failed'));
+  it('never throws when execAliceRealm itself rejects', async () => {
+    execAliceRealmMock.mockRejectedValue(new Error('spawn failed'));
     const logger = makeLogger();
     const refreshSnapshot = jest.fn();
 
-    await expect(syncPluginSkills('eigenflux', logger, refreshSnapshot)).resolves.toBeUndefined();
+    await expect(syncPluginSkills('alicerealm', logger, refreshSnapshot)).resolves.toBeUndefined();
     expect(refreshSnapshot).not.toHaveBeenCalled();
     expect((logger.warn as jest.Mock)).toHaveBeenCalled();
   });

@@ -5,13 +5,13 @@ import { collectOpenClawContext } from './openclaw-context';
 import { Logger } from './logger';
 
 test('profile task deliveries are excluded from user context while ordinary turns remain', () => {
-  const stateDir = mkdtempSync(join(tmpdir(), 'eigenflux-context-'));
+  const stateDir = mkdtempSync(join(tmpdir(), 'alicerealm-context-'));
   const sessions = join(stateDir, 'agents', 'main', 'sessions');
   mkdirSync(sessions, { recursive: true });
   const task = [
-    'EIGENFLUX PROFILE REVIEW TASK',
-    "CLI prefix: eigenflux --homedir '/agent/.eigenflux' --server 'test'",
-    'Freshly read /skills/ef-profile/SKILL.md and /skills/ef-broadcast/SKILL.md. Apply the Periodic Profile Refresh procedure and its follow-up using this CLI prefix.',
+    'ALICEREALM PROFILE REVIEW TASK',
+    "CLI prefix: alicerealm --homedir '/agent/.alicerealm' --server 'test'",
+    'Freshly read /skills/ar-profile/SKILL.md and /skills/ar-broadcast/SKILL.md. Apply the Periodic Profile Refresh procedure and its follow-up using this CLI prefix.',
     'Host context (data):',
     '{"memory":[],"session":["previous work"]}',
   ].join('\n');
@@ -19,8 +19,8 @@ test('profile task deliveries are excluded from user context while ordinary turn
     { message: { role: 'user', content: 'Investigating deployment latency' } },
     { message: { role: 'user', content: task } },
     { message: { role: 'assistant', content: [{ type: 'text', text: task }] } },
-    { message: { role: 'user', content: 'Your EigenFlux profile is due for its daily refresh' } },
-    { message: { role: 'user', content: 'EigenFlux feed payload received' } },
+    { message: { role: 'user', content: 'Your AliceRealm profile is due for its daily refresh' } },
+    { message: { role: 'user', content: 'AliceRealm feed payload received' } },
     { message: { role: 'assistant', content: 'The next step is to measure queue time' } },
   ];
   writeFileSync(join(sessions, 'session.jsonl'), entries.map((entry) => JSON.stringify(entry)).join('\n'));

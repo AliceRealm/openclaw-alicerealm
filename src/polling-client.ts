@@ -1,9 +1,9 @@
 /**
- * Polling client for EigenFlux feed updates.
- * Uses the eigenflux CLI (`eigenflux feed poll`) instead of direct HTTP calls.
+ * Polling client for AliceRealm feed updates.
+ * Uses the alicerealm CLI (`alicerealm feed poll`) instead of direct HTTP calls.
  */
 
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 import { supportsHeartbeatOrigin, supportsFeedBatches } from './cli-version';
 import { getInstalledCliVersion } from './config';
 import { Logger } from './logger';
@@ -16,19 +16,19 @@ export const MAX_POLL_INTERVAL_SEC = 24 * 60 * 60;
 export const PLAN_UNAVAILABLE_WARN_THRESHOLD = 3;
 
 /**
- * Reads the feed poll interval (in seconds) from the eigenflux CLI config
- * (`eigenflux config get --key feed_poll_interval`). Values are stored as
+ * Reads the feed poll interval (in seconds) from the alicerealm CLI config
+ * (`alicerealm config get --key feed_poll_interval`). Values are stored as
  * decimal-string seconds per the config KV conventions. Falls back to 600
  * (10 minutes) when the key is unset, the value is invalid, out of the
  * supported range [10s, 86400s], or the CLI call fails.
  */
 export async function readPollIntervalSec(
-  eigenfluxBin: string,
+  alicerealmBin: string,
   serverName: string,
   logger: Logger
 ): Promise<number> {
-  const result = await execEigenflux<unknown>(
-    eigenfluxBin,
+  const result = await execAliceRealm<unknown>(
+    alicerealmBin,
     ['config', 'get', '--key', POLL_INTERVAL_CONFIG_KEY, '--server', serverName, '--format', 'json'],
     { logger }
   );
@@ -49,7 +49,7 @@ export async function readPollIntervalSec(
 
   if (numeric === undefined) {
     logger.warn(
-      `Ignoring non-numeric pollInterval from eigenflux config (server=${serverName}, value=${JSON.stringify(result.data)}); using ${DEFAULT_POLL_INTERVAL_SEC}s`
+      `Ignoring non-numeric pollInterval from alicerealm config (server=${serverName}, value=${JSON.stringify(result.data)}); using ${DEFAULT_POLL_INTERVAL_SEC}s`
     );
     return DEFAULT_POLL_INTERVAL_SEC;
   }
@@ -57,7 +57,7 @@ export async function readPollIntervalSec(
   const floored = Math.floor(numeric);
   if (floored < MIN_POLL_INTERVAL_SEC || floored > MAX_POLL_INTERVAL_SEC) {
     logger.warn(
-      `pollInterval ${floored}s from eigenflux config (server=${serverName}) is outside [${MIN_POLL_INTERVAL_SEC}s, ${MAX_POLL_INTERVAL_SEC}s]; using ${DEFAULT_POLL_INTERVAL_SEC}s`
+      `pollInterval ${floored}s from alicerealm config (server=${serverName}) is outside [${MIN_POLL_INTERVAL_SEC}s, ${MAX_POLL_INTERVAL_SEC}s]; using ${DEFAULT_POLL_INTERVAL_SEC}s`
     );
     return DEFAULT_POLL_INTERVAL_SEC;
   }
@@ -112,13 +112,13 @@ export interface PollingClientConfig {
   shouldPoll?: () => boolean;
   onPollSkipped?: () => Promise<void>;
   serverName: string;
-  eigenfluxBin: string;
+  alicerealmBin: string;
   /** Actual model observed for this runtime; absent until ownership is verified. */
   resolveModel?: () => string | undefined;
   /**
    * Resolves the seconds to wait before the next poll. Invoked after every
    * poll completes so the interval can be changed at runtime via the
-   * eigenflux CLI config (`pollInterval` key).
+   * alicerealm CLI config (`pollInterval` key).
    */
   resolvePollIntervalSec: () => Promise<number>;
   logger: Logger;
@@ -162,7 +162,7 @@ export interface PollOnceOptions {
   notifyAuthRequired?: boolean;
 }
 
-export class EigenFluxPollingClient {
+export class AliceRealmPollingClient {
   private config: PollingClientConfig;
   private timeoutId: NodeJS.Timeout | null = null;
   private isRunning = false;
@@ -304,12 +304,12 @@ export class EigenFluxPollingClient {
 
         const cliVersion = await this.resolveCliVersion();
         const originSupported = supportsHeartbeatOrigin(cliVersion);
-        const result = await execEigenflux<FeedResponseData>(
-          this.config.eigenfluxBin,
+        const result = await execAliceRealm<FeedResponseData>(
+          this.config.alicerealmBin,
           ['feed', 'poll', '--limit', '20', '--action', 'refresh', '-s', this.config.serverName, '-f', 'json',
             ...(supportsFeedBatches(cliVersion) ? ['--batch', '5'] : []),
             ...(originSupported ? ['--origin', scheduled ? 'heartbeat' : 'owner'] : [])],
-          { logger: this.config.logger, env: { EIGENFLUX_MODEL: this.config.resolveModel?.() } }
+          { logger: this.config.logger, env: { ALICEREALM_MODEL: this.config.resolveModel?.() } }
         );
 
         if (result.kind === 'auth_required') {
@@ -324,7 +324,7 @@ export class EigenFluxPollingClient {
         if (result.kind === 'not_installed') {
           return {
             kind: 'error',
-            error: new Error(`eigenflux CLI not installed (bin=${result.bin})`),
+            error: new Error(`alicerealm CLI not installed (bin=${result.bin})`),
           };
         }
 
@@ -381,7 +381,7 @@ export class EigenFluxPollingClient {
   /** Read the installed CLI version for this cycle; an unreadable version omits optional flags. */
   private async resolveCliVersion(): Promise<string | null> {
     try {
-      return await getInstalledCliVersion(this.config.eigenfluxBin, this.config.logger);
+      return await getInstalledCliVersion(this.config.alicerealmBin, this.config.logger);
     } catch {
       return null;
     }
@@ -391,8 +391,8 @@ export class EigenFluxPollingClient {
     this.planUnavailableSkips += 1;
     if (this.planUnavailableSkips === PLAN_UNAVAILABLE_WARN_THRESHOLD) {
       this.config.logger.warn(
-        `Feed polling is paused for server=${this.config.serverName} because the EigenFlux CLI heartbeat plan is unavailable ` +
-        `(${PLAN_UNAVAILABLE_WARN_THRESHOLD} consecutive cycles); update the EigenFlux CLI to restore Feed delivery`
+        `Feed polling is paused for server=${this.config.serverName} because the AliceRealm CLI heartbeat plan is unavailable ` +
+        `(${PLAN_UNAVAILABLE_WARN_THRESHOLD} consecutive cycles); update the AliceRealm CLI to restore Feed delivery`
       );
     }
   }
@@ -400,7 +400,7 @@ export class EigenFluxPollingClient {
   private recordPlanAvailable(): void {
     if (this.planUnavailableSkips >= PLAN_UNAVAILABLE_WARN_THRESHOLD) {
       this.config.logger.info(
-        `Feed polling resumed for server=${this.config.serverName}: EigenFlux CLI heartbeat plan is available again`
+        `Feed polling resumed for server=${this.config.serverName}: AliceRealm CLI heartbeat plan is available again`
       );
     }
     this.planUnavailableSkips = 0;

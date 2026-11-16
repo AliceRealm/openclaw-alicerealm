@@ -1,22 +1,22 @@
 {
-  "id": "openclaw-eigenflux",
-  "name": "EigenFlux",
-  "version": "0.0.54",
-  "description": "CLI-based EigenFlux delivery for OpenClaw with server discovery, feed polling, and PM streaming",
+  "id": "openclaw-alicerealm",
+  "name": "AliceRealm",
+  "version": "0.0.55",
+  "description": "CLI-based AliceRealm delivery for OpenClaw with server discovery, feed polling, and PM streaming",
   "activation": {
     "onStartup": true
   },
   "contracts": {
-    "tools": ["eigenflux__followup"]
+    "tools": ["alicerealm__followup"]
   },
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
-      "eigenfluxBin": {
+      "alicerealmBin": {
         "type": "string",
-        "description": "Path to the eigenflux CLI binary",
-        "default": "eigenflux"
+        "description": "Path to the alicerealm CLI binary",
+        "default": "alicerealm"
       },
       "openclawCliBin": {
         "type": "string",
@@ -26,7 +26,7 @@
       "skills": {
         "type": "array",
         "items": { "type": "string" },
-        "description": "EigenFlux skill IDs to register"
+        "description": "AliceRealm skill IDs to register"
       },
       "serverRouting": {
         "type": "object",

@@ -106,7 +106,7 @@ describe('resolveNotificationRoute', () => {
   });
 
   test('prefers remembered session route over dynamically fresher session when config is automatic', async () => {
-    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'eigenflux-route-memory-'));
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'alicerealm-route-memory-'));
     const sessionStorePath = path.join(workdir, 'sessions.json');
 
     fs.writeFileSync(
@@ -151,8 +151,8 @@ describe('resolveNotificationRoute', () => {
         agentId: 'main',
         sessionStorePath,
         store: runtimeStoreMock,
-        eigenfluxBin: 'eigenflux',
-        serverName: 'eigenflux',
+        alicerealmBin: 'alicerealm',
+        serverName: 'alicerealm',
         routeOverrides: {
           sessionKey: false,
           agentId: false,
@@ -176,7 +176,7 @@ describe('resolveNotificationRoute', () => {
   });
 
   test('respects explicit route overrides while still enriching exact session metadata', async () => {
-    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'eigenflux-route-explicit-'));
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'alicerealm-route-explicit-'));
     const sessionStorePath = path.join(workdir, 'sessions.json');
 
     fs.writeFileSync(
@@ -201,8 +201,8 @@ describe('resolveNotificationRoute', () => {
         replyChannel: 'feishu',
         sessionStorePath,
         store: runtimeStoreMock,
-        eigenfluxBin: 'eigenflux',
-        serverName: 'eigenflux',
+        alicerealmBin: 'alicerealm',
+        serverName: 'alicerealm',
         routeOverrides: {
           sessionKey: true,
           agentId: true,
@@ -240,8 +240,8 @@ describe('resolveNotificationRoute', () => {
         sessionKey: 'main',
         agentId: 'main',
         store: runtimeStoreMock,
-        eigenfluxBin: 'eigenflux',
-        serverName: 'eigenflux',
+        alicerealmBin: 'alicerealm',
+        serverName: 'alicerealm',
         routeOverrides: {
           sessionKey: false,
           agentId: false,
@@ -263,7 +263,7 @@ describe('resolveNotificationRoute', () => {
   });
 
   test('prefers the session-store route whose peer shape matches the normalized target', async () => {
-    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'eigenflux-route-peer-shape-'));
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'alicerealm-route-peer-shape-'));
     const sessionStorePath = path.join(workdir, 'sessions.json');
 
     fs.writeFileSync(
@@ -308,8 +308,8 @@ describe('resolveNotificationRoute', () => {
         agentId: 'main',
         sessionStorePath,
         store: runtimeStoreMock,
-        eigenfluxBin: 'eigenflux',
-        serverName: 'eigenflux',
+        alicerealmBin: 'alicerealm',
+        serverName: 'alicerealm',
         routeOverrides: {
           sessionKey: false,
           agentId: false,
@@ -336,7 +336,7 @@ describe('resolveNotificationRoute', () => {
     // Real-world case: sessions.json has an external entry with only updatedAt
     // set (no deliveryContext.to), plus a webchat bookkeeping entry. The
     // external sessionKey shape alone must be enough to route to it.
-    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'eigenflux-route-sparse-'));
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'alicerealm-route-sparse-'));
     const sessionStorePath = path.join(workdir, 'sessions.json');
     fs.writeFileSync(
       sessionStorePath,
@@ -358,8 +358,8 @@ describe('resolveNotificationRoute', () => {
         agentId: 'main',
         sessionStorePath,
         store: runtimeStoreMock,
-        eigenfluxBin: 'eigenflux',
-        serverName: 'eigenflux',
+        alicerealmBin: 'alicerealm',
+        serverName: 'alicerealm',
       },
       createLogger()
     );
@@ -523,7 +523,7 @@ describe('isDirectSessionKey', () => {
 
 describe('auto-scan group exclusion', () => {
   function writeStore(entries: Record<string, unknown>): string {
-    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'eigenflux-group-exclusion-'));
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'alicerealm-group-exclusion-'));
     const sessionStorePath = path.join(workdir, 'sessions.json');
     fs.writeFileSync(sessionStorePath, JSON.stringify(entries), 'utf-8');
     return sessionStorePath;
@@ -559,8 +559,8 @@ describe('auto-scan group exclusion', () => {
         agentId: 'main',
         sessionStorePath,
         store: runtimeStoreMock,
-        eigenfluxBin: 'eigenflux',
-        serverName: 'eigenflux',
+        alicerealmBin: 'alicerealm',
+        serverName: 'alicerealm',
       },
       createLogger()
     );
@@ -589,8 +589,8 @@ describe('auto-scan group exclusion', () => {
         agentId: 'main',
         sessionStorePath,
         store: runtimeStoreMock,
-        eigenfluxBin: 'eigenflux',
-        serverName: 'eigenflux',
+        alicerealmBin: 'alicerealm',
+        serverName: 'alicerealm',
       },
       createLogger()
     );
@@ -617,8 +617,8 @@ describe('auto-scan group exclusion', () => {
         agentId: 'main',
         sessionStorePath,
         store: runtimeStoreMock,
-        eigenfluxBin: 'eigenflux',
-        serverName: 'eigenflux',
+        alicerealmBin: 'alicerealm',
+        serverName: 'alicerealm',
       },
       createLogger()
     );
@@ -629,7 +629,7 @@ describe('auto-scan group exclusion', () => {
 
 describe('direct tiebreaker', () => {
   test('most-recent DM wins regardless of key shape', async () => {
-    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'eigenflux-direct-tiebreaker-'));
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'alicerealm-direct-tiebreaker-'));
     const sessionStorePath = path.join(workdir, 'sessions.json');
     fs.writeFileSync(
       sessionStorePath,
@@ -654,8 +654,8 @@ describe('direct tiebreaker', () => {
         agentId: 'main',
         sessionStorePath,
         store: runtimeStoreMock,
-        eigenfluxBin: 'eigenflux',
-        serverName: 'eigenflux',
+        alicerealmBin: 'alicerealm',
+        serverName: 'alicerealm',
       },
       createLogger()
     );
@@ -664,7 +664,7 @@ describe('direct tiebreaker', () => {
   });
 
   test('channel-scoped DM beats legacy main DM when fresher', async () => {
-    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'eigenflux-direct-tiebreaker-'));
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'alicerealm-direct-tiebreaker-'));
     const sessionStorePath = path.join(workdir, 'sessions.json');
     fs.writeFileSync(
       sessionStorePath,
@@ -689,8 +689,8 @@ describe('direct tiebreaker', () => {
         agentId: 'main',
         sessionStorePath,
         store: runtimeStoreMock,
-        eigenfluxBin: 'eigenflux',
-        serverName: 'eigenflux',
+        alicerealmBin: 'alicerealm',
+        serverName: 'alicerealm',
       },
       createLogger()
     );
@@ -702,7 +702,7 @@ describe('direct tiebreaker', () => {
 
 describe('CLI-overwritten main session fall-through', () => {
   test('auto-scan returns default when main is non-external and only groups remain', async () => {
-    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'eigenflux-cli-overwrite-'));
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'alicerealm-cli-overwrite-'));
     const sessionStorePath = path.join(workdir, 'sessions.json');
     fs.writeFileSync(
       sessionStorePath,
@@ -731,8 +731,8 @@ describe('CLI-overwritten main session fall-through', () => {
         agentId: 'main',
         sessionStorePath,
         store: runtimeStoreMock,
-        eigenfluxBin: 'eigenflux',
-        serverName: 'eigenflux',
+        alicerealmBin: 'alicerealm',
+        serverName: 'alicerealm',
       },
       createLogger()
     );
@@ -742,7 +742,7 @@ describe('CLI-overwritten main session fall-through', () => {
   });
 
   test('remembered DM route survives a main-session overwrite', async () => {
-    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'eigenflux-cli-overwrite-'));
+    const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'alicerealm-cli-overwrite-'));
     const sessionStorePath = path.join(workdir, 'sessions.json');
     fs.writeFileSync(
       sessionStorePath,
@@ -779,8 +779,8 @@ describe('CLI-overwritten main session fall-through', () => {
         agentId: 'main',
         sessionStorePath,
         store: runtimeStoreMock,
-        eigenfluxBin: 'eigenflux',
-        serverName: 'eigenflux',
+        alicerealmBin: 'alicerealm',
+        serverName: 'alicerealm',
       },
       createLogger()
     );

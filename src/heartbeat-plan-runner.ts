@@ -1,9 +1,9 @@
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 import { Logger } from './logger';
 
 export interface HeartbeatPlanRunnerConfig {
-  eigenfluxBin: string;
-  eigenfluxHome: string;
+  alicerealmBin: string;
+  alicerealmHome: string;
   serverName: string;
   logger: Logger;
   onAuthRequired?: (stderr?: string) => void | Promise<void>;
@@ -33,7 +33,7 @@ function isHeartbeatExecutionPlan(value: unknown): value is HeartbeatExecutionPl
     typeof plan.wake_on_empty === 'boolean';
 }
 
-export class EigenFluxHeartbeatPlanRunner {
+export class AliceRealmHeartbeatPlanRunner {
   private inFlight = false;
   private lastUpdateDeferral?: string;
 
@@ -48,11 +48,11 @@ export class EigenFluxHeartbeatPlanRunner {
 
     this.inFlight = true;
     try {
-      const result = await execEigenflux<unknown>(
-        this.config.eigenfluxBin,
+      const result = await execAliceRealm<unknown>(
+        this.config.alicerealmBin,
         [
           '--homedir',
-          this.config.eigenfluxHome,
+          this.config.alicerealmHome,
           '--server',
           this.config.serverName,
           'heartbeat',
@@ -68,16 +68,16 @@ export class EigenFluxHeartbeatPlanRunner {
           this.logCLIUpdate(result.data.cli_update);
           return result.data;
         }
-        this.config.logger.warn('Heartbeat plan returned an invalid execution contract; update the EigenFlux CLI');
+        this.config.logger.warn('Heartbeat plan returned an invalid execution contract; update the AliceRealm CLI');
         return null;
       }
       if (result.kind === 'auth_required') {
-        this.config.logger.warn('Heartbeat plan requires EigenFlux authentication');
+        this.config.logger.warn('Heartbeat plan requires AliceRealm authentication');
         await this.config.onAuthRequired?.(result.stderr);
         return null;
       }
       if (result.kind === 'not_installed') {
-        this.config.logger.warn(`Heartbeat plan: eigenflux CLI not installed (bin=${result.bin})`);
+        this.config.logger.warn(`Heartbeat plan: alicerealm CLI not installed (bin=${result.bin})`);
         return null;
       }
       if (result.authenticationUnavailable) {

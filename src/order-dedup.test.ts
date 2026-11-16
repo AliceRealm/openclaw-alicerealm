@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { OrderNotifications } from './order-notifications';
-import { EigenFluxNotifier } from './notifier';
+import { AliceRealmNotifier } from './notifier';
 import { Logger } from './logger';
 
 const n = { notification_id: '358858910188175361', source_type: 'commission_order', payload: { order_id: '358858910112677888' } };
@@ -10,7 +10,7 @@ const event = { type: 'notification_push', data: { notifications: [n] } };
 const logger = new Logger({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() });
 
 function transport(run: jest.Mock, waitForRun: jest.Mock, fallback = jest.fn()) {
-  const notifier = new EigenFluxNotifier({ runtime: { subagent: { run, waitForRun }, system: { runCommandWithTimeout: fallback } }, config: {} } as any, logger,
+  const notifier = new AliceRealmNotifier({ runtime: { subagent: { run, waitForRun }, system: { runCommandWithTimeout: fallback } }, config: {} } as any, logger,
     { sessionKey: 'main', agentId: 'main', openclawCliBin: 'openclaw' });
   jest.spyOn(notifier as any, 'resolveRoute').mockResolvedValue({ route: { agentId: 'main', sessionKey: 'main', replyChannel: 'feishu', replyTo: 'test' } });
   jest.spyOn(notifier as any, 'seedOneShotDeliveryContext').mockResolvedValue(true);

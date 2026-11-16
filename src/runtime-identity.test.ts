@@ -9,11 +9,11 @@ describe('OpenClaw product identity', () => {
 
   test('honors only a separately declared product override', () => {
     expect(resolveRuntimeHost('2026.7.1', 'hermes/0.17.0')).toBe('hermes/0.17.0');
-    expect(() => resolveRuntimeHost('2026.7.1', 'terminal')).toThrow('EIGENFLUX_HOST_OVERRIDE');
-    expect(() => resolveRuntimeHost('2026.7.1', 'bad host')).toThrow('EIGENFLUX_HOST_OVERRIDE');
+    expect(() => resolveRuntimeHost('2026.7.1', 'terminal')).toThrow('ALICEREALM_HOST_OVERRIDE');
+    expect(() => resolveRuntimeHost('2026.7.1', 'bad host')).toThrow('ALICEREALM_HOST_OVERRIDE');
   });
 });
 
 test.each(['plugin', 'skill/1', 'skills', 'unknown', 'terminal/1'])('rejects mode sentinel %s as a product', (host) => {
-  expect(() => resolveRuntimeHost(undefined, host)).toThrow('EIGENFLUX_HOST_OVERRIDE');
+  expect(() => resolveRuntimeHost(undefined, host)).toThrow('ALICEREALM_HOST_OVERRIDE');
 });

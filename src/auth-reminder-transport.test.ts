@@ -8,7 +8,7 @@ const params = {
   sessionKey: 'agent:main:main',
   message: 'Authentication reminder with the current owner action',
   deliver: true as const,
-  lane: 'eigenflux-bg',
+  lane: 'alicerealm-bg',
   idempotencyKey: 'auth-reminder-existing-key',
 };
 

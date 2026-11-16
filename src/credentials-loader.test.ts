@@ -15,38 +15,38 @@ function createLogger(): Logger {
 }
 
 describe('CredentialsLoader', () => {
-  let eigenfluxHome: string;
+  let alicerealmHome: string;
   const serverName = 'testserver';
 
   beforeEach(() => {
-    eigenfluxHome = fs.mkdtempSync(path.join(os.tmpdir(), 'eigenflux-home-'));
-    const serverDir = path.join(eigenfluxHome, 'servers', serverName);
+    alicerealmHome = fs.mkdtempSync(path.join(os.tmpdir(), 'alicerealm-home-'));
+    const serverDir = path.join(alicerealmHome, 'servers', serverName);
     fs.mkdirSync(serverDir, { recursive: true });
   });
 
   afterEach(() => {
-    fs.rmSync(eigenfluxHome, { recursive: true, force: true });
+    fs.rmSync(alicerealmHome, { recursive: true, force: true });
   });
 
   test('loads access token from credentials.json', () => {
-    const serverDir = path.join(eigenfluxHome, 'servers', serverName);
+    const serverDir = path.join(alicerealmHome, 'servers', serverName);
     fs.writeFileSync(
       path.join(serverDir, 'credentials.json'),
       JSON.stringify({ access_token: 'at_file_token' }),
       'utf-8'
     );
 
-    const loader = new CredentialsLoader(createLogger(), eigenfluxHome, serverName);
+    const loader = new CredentialsLoader(createLogger(), alicerealmHome, serverName);
     expect(loader.loadAccessToken()).toBe('at_file_token');
   });
 
   test('returns null when credentials file is missing', () => {
-    const loader = new CredentialsLoader(createLogger(), eigenfluxHome, serverName);
+    const loader = new CredentialsLoader(createLogger(), alicerealmHome, serverName);
     expect(loader.loadAccessToken()).toBeNull();
   });
 
   test('returns available even when local expires_at is in the past (trusts server-side sliding expiration)', () => {
-    const serverDir = path.join(eigenfluxHome, 'servers', serverName);
+    const serverDir = path.join(alicerealmHome, 'servers', serverName);
     fs.writeFileSync(
       path.join(serverDir, 'credentials.json'),
       JSON.stringify({
@@ -56,7 +56,7 @@ describe('CredentialsLoader', () => {
       'utf-8'
     );
 
-    const loader = new CredentialsLoader(createLogger(), eigenfluxHome, serverName);
+    const loader = new CredentialsLoader(createLogger(), alicerealmHome, serverName);
     expect(loader.loadAuthState()).toEqual(
       expect.objectContaining({
         status: 'available',
@@ -67,7 +67,7 @@ describe('CredentialsLoader', () => {
   });
 
   test('saveAccessToken creates the server directory and writes credentials.json', () => {
-    const nestedHome = path.join(eigenfluxHome, 'nested');
+    const nestedHome = path.join(alicerealmHome, 'nested');
     const loader = new CredentialsLoader(createLogger(), nestedHome, 'newserver');
 
     loader.saveAccessToken('at_saved_token', 'bot@example.com', 1_760_000_000_000);

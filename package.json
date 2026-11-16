@@ -1,7 +1,7 @@
 {
-  "name": "@phronesis-io/openclaw-eigenflux",
-  "version": "0.0.54",
-  "description": "OpenClaw plugin for EigenFlux periodic polling delivery",
+  "name": "@alicerealm/openclaw-alicerealm",
+  "version": "0.0.55",
+  "description": "OpenClaw plugin for AliceRealm periodic polling delivery",
   "main": "dist/index.js",
   "files": [
     "dist",
@@ -35,11 +35,11 @@
   },
   "keywords": [
     "openclaw",
-    "eigenflux",
+    "alicerealm",
     "agent network",
     "agent broadcast"
   ],
-  "author": "Phronesis",
+  "author": "AliceRealm contributors",
   "license": "MIT",
   "publishConfig": {
     "access": "public"

@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Migrate the openclaw-eigenflux plugin from a legacy manual export to the official OpenClaw Plugin SDK (`definePluginEntry`), adopt SDK utilities (`runtime-store`, `channel-route`), and modernize types.
+**Goal:** Migrate the openclaw-alicerealm plugin from a legacy manual export to the official OpenClaw Plugin SDK (`definePluginEntry`), adopt SDK utilities (`runtime-store`, `channel-route`), and modernize types.
 
-**Architecture:** Replace the hand-rolled plugin object with `definePluginEntry()` from `openclaw/plugin-sdk/plugin-entry`. Guard side effects behind `registrationMode === 'full'`. Replace CLI-based session route persistence with `plugin-sdk/runtime-store`. Delegate generic route normalization to `plugin-sdk/channel-route` while keeping EigenFlux-specific logic. Remove the hand-rolled `.d.ts` stubs in favor of the official SDK types.
+**Architecture:** Replace the hand-rolled plugin object with `definePluginEntry()` from `openclaw/plugin-sdk/plugin-entry`. Guard side effects behind `registrationMode === 'full'`. Replace CLI-based session route persistence with `plugin-sdk/runtime-store`. Delegate generic route normalization to `plugin-sdk/channel-route` while keeping AliceRealm-specific logic. Remove the hand-rolled `.d.ts` stubs in favor of the official SDK types.
 
 **Tech Stack:** TypeScript 5.x, OpenClaw SDK 2026.5.x, tsup, Jest
 
@@ -70,10 +70,10 @@ Replace the contents of `openclaw.plugin.json` with:
 
 ```json
 {
-  "id": "openclaw-eigenflux",
-  "name": "EigenFlux",
+  "id": "openclaw-alicerealm",
+  "name": "AliceRealm",
   "version": "0.0.9",
-  "description": "CLI-based EigenFlux delivery for OpenClaw with server discovery, feed polling, and PM streaming",
+  "description": "CLI-based AliceRealm delivery for OpenClaw with server discovery, feed polling, and PM streaming",
   "activation": {
     "onStartup": true
   },
@@ -82,10 +82,10 @@ Replace the contents of `openclaw.plugin.json` with:
     "type": "object",
     "additionalProperties": false,
     "properties": {
-      "eigenfluxBin": {
+      "alicerealmBin": {
         "type": "string",
-        "description": "Path to the eigenflux CLI binary",
-        "default": "eigenflux"
+        "description": "Path to the alicerealm CLI binary",
+        "default": "alicerealm"
       },
       "openclawCliBin": {
         "type": "string",
@@ -180,10 +180,10 @@ export const PLUGIN_CONFIG_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    eigenfluxBin: {
+    alicerealmBin: {
       type: 'string',
-      description: 'Path to the eigenflux CLI binary',
-      default: DEFAULT_EIGENFLUX_BIN,
+      description: 'Path to the alicerealm CLI binary',
+      default: DEFAULT_ALICEREALM_BIN,
     },
     openclawCliBin: {
       type: 'string',
@@ -212,9 +212,9 @@ import type { OpenClawPluginApi } from 'openclaw/plugin-sdk';
 ```typescript
 // Before:
 const plugin = {
-  id: 'openclaw-eigenflux',
-  name: 'EigenFlux',
-  description: 'OpenClaw extension for EigenFlux with CLI-based feed polling and PM streaming',
+  id: 'openclaw-alicerealm',
+  name: 'AliceRealm',
+  description: 'OpenClaw extension for AliceRealm with CLI-based feed polling and PM streaming',
   configSchema: PLUGIN_CONFIG_SCHEMA,
   register,
 };
@@ -223,9 +223,9 @@ export default plugin;
 
 // After:
 export default definePluginEntry({
-  id: 'openclaw-eigenflux',
-  name: 'EigenFlux',
-  description: 'OpenClaw extension for EigenFlux with CLI-based feed polling and PM streaming',
+  id: 'openclaw-alicerealm',
+  name: 'AliceRealm',
+  description: 'OpenClaw extension for AliceRealm with CLI-based feed polling and PM streaming',
   register(api) {
     if (api.registrationMode !== 'full') return;
     registerPlugin(api);
@@ -356,7 +356,7 @@ Replace the entire contents of `src/logger.ts`:
 import type { PluginLogger } from 'openclaw/plugin-sdk';
 
 /**
- * Logger wrapper that prefixes all messages with [EigenFlux].
+ * Logger wrapper that prefixes all messages with [AliceRealm].
  */
 export class Logger {
   private baseLogger: PluginLogger;
@@ -366,19 +366,19 @@ export class Logger {
   }
 
   info(message: string, ...args: unknown[]): void {
-    this.baseLogger.info(`[EigenFlux] ${message}`, ...args);
+    this.baseLogger.info(`[AliceRealm] ${message}`, ...args);
   }
 
   warn(message: string, ...args: unknown[]): void {
-    this.baseLogger.warn(`[EigenFlux] ${message}`, ...args);
+    this.baseLogger.warn(`[AliceRealm] ${message}`, ...args);
   }
 
   error(message: string, ...args: unknown[]): void {
-    this.baseLogger.error(`[EigenFlux] ${message}`, ...args);
+    this.baseLogger.error(`[AliceRealm] ${message}`, ...args);
   }
 
   debug(message: string, ...args: unknown[]): void {
-    (this.baseLogger as any).debug?.(`[EigenFlux] ${message}`, ...args);
+    (this.baseLogger as any).debug?.(`[AliceRealm] ${message}`, ...args);
   }
 }
 ```
@@ -422,7 +422,7 @@ After the existing imports (line 13), add:
  * Typed subset of the OpenClaw runtime API used by the notifier.
  * Avoids ad-hoc inline casts throughout the delivery methods.
  */
-type EigenFluxRuntimeApi = {
+type AliceRealmRuntimeApi = {
   subagent?: {
     run?: (params: {
       sessionKey: string;
@@ -460,11 +460,11 @@ type EigenFluxRuntimeApi = {
 
 - [ ] **Step 2: Add a runtime accessor method to the class**
 
-Add a private method to `EigenFluxNotifier` that casts `api.runtime` once:
+Add a private method to `AliceRealmNotifier` that casts `api.runtime` once:
 
 ```typescript
-private get runtime(): EigenFluxRuntimeApi {
-  return (this.api.runtime ?? {}) as EigenFluxRuntimeApi;
+private get runtime(): AliceRealmRuntimeApi {
+  return (this.api.runtime ?? {}) as AliceRealmRuntimeApi;
 }
 ```
 
@@ -533,7 +533,7 @@ Expected: All tests pass. Runtime behavior is identical — this is a type-only 
 
 ```bash
 git add src/notifier.ts
-git commit -m "refactor: consolidate runtime API casts into typed EigenFluxRuntimeApi interface"
+git commit -m "refactor: consolidate runtime API casts into typed AliceRealmRuntimeApi interface"
 ```
 
 ---
@@ -542,7 +542,7 @@ git commit -m "refactor: consolidate runtime API casts into typed EigenFluxRunti
 
 **Files:**
 - Modify: `src/session-route-memory.ts`
-- Modify: `src/notifier.ts` (pass store instead of eigenfluxBin)
+- Modify: `src/notifier.ts` (pass store instead of alicerealmBin)
 - Modify: `src/index.ts` (create store, pass to notifier)
 - Modify: `src/notification-route-resolver.ts` (read from store)
 - Modify: `src/index.test.ts` (update mocks)
@@ -566,18 +566,18 @@ jest.mock('openclaw/plugin-sdk/runtime-store', () => ({
 }));
 ```
 
-Update the `/eigenflux here` test (the one titled `'supports /eigenflux here and persists the current conversation route'`) to verify the store is called instead of `execEigenflux`:
+Update the `/alicerealm here` test (the one titled `'supports /alicerealm here and persists the current conversation route'`) to verify the store is called instead of `execAliceRealm`:
 
 ```typescript
-// Replace the assertion block that checks execEigenfluxMock for config set:
+// Replace the assertion block that checks execAliceRealmMock for config set:
 // Before:
-// const configSetCall = execEigenfluxMock.mock.calls.find(...)
+// const configSetCall = execAliceRealmMock.mock.calls.find(...)
 // expect(configSetCall).toBeDefined();
 // ...
 
 // After:
 expect(runtimeStoreMock.set).toHaveBeenCalledWith(
-  'deliver_session:eigenflux',
+  'deliver_session:alicerealm',
   expect.objectContaining({
     sessionKey: 'agent:mengtian:feishu:direct:ou_current',
     agentId: 'mengtian',
@@ -592,7 +592,7 @@ expect(runtimeStoreMock.set).toHaveBeenCalledWith(
 
 Run: `pnpm test -- --testPathPattern index.test`
 
-Expected: FAIL — the current implementation still uses `execEigenflux` for config set, not the runtime store.
+Expected: FAIL — the current implementation still uses `execAliceRealm` for config set, not the runtime store.
 
 - [ ] **Step 3: Rewrite session-route-memory.ts to use runtime-store**
 
@@ -750,17 +750,17 @@ export async function writeStoredNotificationRoute(
 }
 ```
 
-- [ ] **Step 4: Update notifier to accept store instead of eigenfluxBin for route persistence**
+- [ ] **Step 4: Update notifier to accept store instead of alicerealmBin for route persistence**
 
-In `src/notifier.ts`, update `EigenFluxNotifierConfig` to include the store:
+In `src/notifier.ts`, update `AliceRealmNotifierConfig` to include the store:
 
 ```typescript
 // Add import at top:
 import { type PluginRuntimeStore } from './session-route-memory';
 
-// Update EigenFluxNotifierConfig — add store field:
-export type EigenFluxNotifierConfig = {
-  eigenfluxBin?: string;
+// Update AliceRealmNotifierConfig — add store field:
+export type AliceRealmNotifierConfig = {
+  alicerealmBin?: string;
   serverName?: string;
   sessionKey: string;
   agentId: string;
@@ -779,7 +779,7 @@ In the `rememberRouteIfChanged` method, update the `writeStoredNotificationRoute
 ```typescript
 // Before:
 await writeStoredNotificationRoute(
-  this.config.eigenfluxBin,
+  this.config.alicerealmBin,
   this.config.serverName,
   route,
   this.logger
@@ -811,7 +811,7 @@ export type NotificationRouteConfig = {
   replyTo?: string;
   replyAccountId?: string;
   sessionStorePath?: string;
-  eigenfluxBin?: string;
+  alicerealmBin?: string;
   serverName?: string;
   routeOverrides?: NotificationRouteOverrides;
   store?: PluginRuntimeStore;
@@ -823,7 +823,7 @@ Update the `readStoredNotificationRoute` call in `resolveNotificationRoute` (aro
 ```typescript
 // Before:
 const remembered = await readStoredNotificationRoute(
-  config.eigenfluxBin,
+  config.alicerealmBin,
   config.serverName,
   logger
 );
@@ -850,16 +850,16 @@ In the `registerPlugin` function (formerly `register`), create the store after g
 function registerPlugin(api: OpenClawPluginApi): void {
   const logger = new Logger(resolvePluginLogger(api));
   const pluginConfig = resolvePluginConfig(api.pluginConfig, logger);
-  const eigenfluxHome = resolveEigenfluxHome();
+  const alicerealmHome = resolveAliceRealmHome();
   const store = createPluginRuntimeStore(api);
   // ... rest of function
 ```
 
-Pass the store to `EigenFluxNotifier` in `createServerRuntime`. Update the notifier constructor call (around line 235):
+Pass the store to `AliceRealmNotifier` in `createServerRuntime`. Update the notifier constructor call (around line 235):
 
 ```typescript
-const notifier = new EigenFluxNotifier(api, logger, {
-  eigenfluxBin: pluginConfig.eigenfluxBin,
+const notifier = new AliceRealmNotifier(api, logger, {
+  alicerealmBin: pluginConfig.alicerealmBin,
   serverName: server.name,
   sessionKey: routing.sessionKey,
   agentId: routing.agentId,
@@ -879,12 +879,12 @@ Also pass the store in `deliverNotInstalledPrompt` (around line 209):
 async function deliverNotInstalledPrompt(
   api: OpenClawPluginApi,
   logger: Logger,
-  pluginConfig: ResolvedEigenFluxPluginConfig,
-  _eigenfluxHome: string,
+  pluginConfig: ResolvedAliceRealmPluginConfig,
+  _alicerealmHome: string,
   bin: string,
   store: PluginRuntimeStore
 ): Promise<void> {
-  const notifier = new EigenFluxNotifier(api, logger, {
+  const notifier = new AliceRealmNotifier(api, logger, {
     sessionKey: DEFAULT_ROUTING.sessionKey,
     agentId: DEFAULT_ROUTING.agentId,
     replyChannel: DEFAULT_ROUTING.replyChannel,
@@ -899,13 +899,13 @@ async function deliverNotInstalledPrompt(
 
 Update the call site in the discovery service start handler.
 
-Also update `writeStoredNotificationRoute` calls in `src/index.ts` (the `rememberCurrentCommandRouteIfPossible` and `buildHereText` functions) to pass `store` instead of `eigenfluxBin`. These functions need the store added to their parameters.
+Also update `writeStoredNotificationRoute` calls in `src/index.ts` (the `rememberCurrentCommandRouteIfPossible` and `buildHereText` functions) to pass `store` instead of `alicerealmBin`. These functions need the store added to their parameters.
 
 - [ ] **Step 7: Update all tests**
 
 In `src/index.test.ts`:
 - Add the `runtimeStoreMock` as shown in Step 1
-- Update the `/eigenflux here` test assertions to check `runtimeStoreMock.set` instead of `execEigenfluxMock`
+- Update the `/alicerealm here` test assertions to check `runtimeStoreMock.set` instead of `execAliceRealmMock`
 - Reset `runtimeStoreMock` in `beforeEach`
 
 In `src/notifier.test.ts`:
@@ -952,7 +952,7 @@ Expected: A list of exported functions. Look for `normalizeChannelRoute`, `parse
 
 - [ ] **Step 2: Update reply-target.ts to use SDK channel-route**
 
-Based on what Step 1 reveals, delegate the generic `isNormalizedConversationTarget` check and channel-prefix stripping to SDK helpers. Keep the EigenFlux-specific logic:
+Based on what Step 1 reveals, delegate the generic `isNormalizedConversationTarget` check and channel-prefix stripping to SDK helpers. Keep the AliceRealm-specific logic:
 - Feishu `ou_`/`oc_` prefix detection (`deriveReplyTargetKindFromValue`)
 - Discord/Feishu peer shape mapping (`deriveReplyTargetKindFromSessionKey`)
 - `supportsKindPrefixedTargets` channel check
@@ -1002,7 +1002,7 @@ Expected: Build succeeds with no warnings.
 
 Run: `node -e "const p = require('./dist/index.js'); console.log(p.default?.id, typeof p.default?.register)"`
 
-Expected: `openclaw-eigenflux function`
+Expected: `openclaw-alicerealm function`
 
 - [ ] **Step 4: Verify no leftover references to old patterns**
 

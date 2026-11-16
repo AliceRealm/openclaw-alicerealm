@@ -2,14 +2,14 @@ import { Logger } from './logger';
 import type { CliResult } from './cli-executor';
 
 jest.mock('./cli-executor');
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 import {
   FeedbackFlushLoop,
   DEFAULT_BASE_BACKOFF_MS,
   DEFAULT_MAX_BACKOFF_MS,
 } from './feedback-flush-loop';
 
-const execMock = execEigenflux as jest.MockedFunction<typeof execEigenflux>;
+const execMock = execAliceRealm as jest.MockedFunction<typeof execAliceRealm>;
 
 function createLogger(): Logger {
   return new Logger({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() });
@@ -25,7 +25,7 @@ async function settle(): Promise<void> {
 }
 
 function makeLoop(): FeedbackFlushLoop {
-  return new FeedbackFlushLoop({ serverName: 'srv', eigenfluxBin: 'eigenflux', logger: createLogger() });
+  return new FeedbackFlushLoop({ serverName: 'srv', alicerealmBin: 'alicerealm', logger: createLogger() });
 }
 
 describe('FeedbackFlushLoop', () => {

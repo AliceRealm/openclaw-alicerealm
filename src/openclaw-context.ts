@@ -1,5 +1,5 @@
 /**
- * OpenClaw adapter for the host-agnostic `eigenflux profile refresh-task`
+ * OpenClaw adapter for the host-agnostic `alicerealm profile refresh-task`
  * core. The CLI owns prompt assembly + memory reading; this module supplies the
  * two host-specific inputs:
  *   - memoryDirs: where OpenClaw keeps memory markdown (CLI reads the files).
@@ -81,7 +81,7 @@ export function collectOpenClawContext(
 
 /**
  * Read the most recent session transcript for the agent and extract recent
- * user-driven topics — what the user is actually working on. Skips EigenFlux
+ * user-driven topics — what the user is actually working on. Skips AliceRealm
  * system payloads (feed/refresh/PM) so broadcasts don't leak back in as
  * "session" signal.
  */
@@ -130,7 +130,7 @@ function latestSessionFile(dir: string): string | undefined {
 
 /**
  * Pull human-meaningful text out of one transcript JSONL line. Returns undefined
- * for tool calls, sentinels, and EigenFlux system payloads.
+ * for tool calls, sentinels, and AliceRealm system payloads.
  */
 function extractTurnText(line: string): string | undefined {
   let obj: unknown;
@@ -161,8 +161,8 @@ function extractTurnText(line: string): string | undefined {
   text = text.trim();
   if (!text) return undefined;
 
-  // Drop EigenFlux system payloads and bare sentinels — they are noise here.
-  if (/EIGENFLUX_FEED_PAYLOAD|EIGENFLUX PROFILE REVIEW TASK|profile is due for|EigenFlux feed payload/i.test(text)) return undefined;
+  // Drop AliceRealm system payloads and bare sentinels — they are noise here.
+  if (/ALICEREALM_FEED_PAYLOAD|ALICEREALM PROFILE REVIEW TASK|profile is due for|AliceRealm feed payload/i.test(text)) return undefined;
   if (/^(NO_REPLY|HEARTBEAT_OK|Triggered a silent profile refresh)/.test(text)) return undefined;
 
   const oneLine = text.replace(/\s+/g, ' ');

@@ -1,5 +1,5 @@
 import {
-  EigenFluxPollingClient,
+  AliceRealmPollingClient,
   readPollIntervalSec,
   DEFAULT_POLL_INTERVAL_SEC,
   MIN_POLL_INTERVAL_SEC,
@@ -10,9 +10,9 @@ import type { CliResult } from './cli-executor';
 
 jest.mock('./cli-executor');
 
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 
-const execEigenfluxMock = execEigenflux as jest.MockedFunction<typeof execEigenflux>;
+const execAliceRealmMock = execAliceRealm as jest.MockedFunction<typeof execAliceRealm>;
 
 function createLoggerSpies() {
   return {
@@ -37,7 +37,7 @@ function createDeferred<T>() {
   return { promise, resolve, reject };
 }
 
-describe('EigenFluxPollingClient', () => {
+describe('AliceRealmPollingClient', () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
@@ -46,7 +46,7 @@ describe('EigenFluxPollingClient', () => {
     const onFeedPolled = jest.fn().mockResolvedValue(undefined);
     const onAuthRequired = jest.fn().mockResolvedValue(undefined);
 
-    execEigenfluxMock.mockResolvedValue({
+    execAliceRealmMock.mockResolvedValue({
       kind: 'success',
       data: {
         items: [
@@ -70,9 +70,9 @@ describe('EigenFluxPollingClient', () => {
       },
     } as CliResult<any>);
 
-    const client = new EigenFluxPollingClient({
-      serverName: 'eigenflux',
-      eigenfluxBin: 'eigenflux',
+    const client = new AliceRealmPollingClient({
+      serverName: 'alicerealm',
+      alicerealmBin: 'alicerealm',
       resolvePollIntervalSec: jest.fn().mockResolvedValue(60),
       logger: createLogger(),
       onFeedPolled,
@@ -107,21 +107,21 @@ describe('EigenFluxPollingClient', () => {
     );
     expect(onAuthRequired).not.toHaveBeenCalled();
 
-    expect(execEigenfluxMock).toHaveBeenCalledWith(
-      'eigenflux',
-      ['feed', 'poll', '--limit', '20', '--action', 'refresh', '-s', 'eigenflux', '-f', 'json'],
+    expect(execAliceRealmMock).toHaveBeenCalledWith(
+      'alicerealm',
+      ['feed', 'poll', '--limit', '20', '--action', 'refresh', '-s', 'alicerealm', '-f', 'json'],
       expect.objectContaining({ logger: expect.any(Logger) })
     );
   });
 
   test('reports a successful poll even when content delivery throws', async () => {
-    execEigenfluxMock.mockResolvedValue({ kind: 'success', data: {
+    execAliceRealmMock.mockResolvedValue({ kind: 'success', data: {
       items: [{ item_id: 'delivery-error-item' }], has_more: false, notifications: [],
     } } as CliResult<any>);
     const onPollSuccess = jest.fn().mockResolvedValue(undefined);
     const onFeedPolled = jest.fn().mockRejectedValue(new Error('delivery unavailable'));
-    const client = new EigenFluxPollingClient({
-      serverName: 'eigenflux', eigenfluxBin: 'eigenflux',
+    const client = new AliceRealmPollingClient({
+      serverName: 'alicerealm', alicerealmBin: 'alicerealm',
       resolvePollIntervalSec: jest.fn().mockResolvedValue(60), logger: createLogger(),
       onPollSuccess, onFeedPolled, onAuthRequired: jest.fn().mockResolvedValue(undefined),
     });
@@ -133,14 +133,14 @@ describe('EigenFluxPollingClient', () => {
 
   test('runs the Heartbeat plan hook before polling the feed', async () => {
     const onHeartbeatStart = jest.fn().mockResolvedValue(undefined);
-    execEigenfluxMock.mockResolvedValue({
+    execAliceRealmMock.mockResolvedValue({
       kind: 'success',
       data: { items: [], has_more: false, notifications: [] },
     } as CliResult<any>);
 
-    const client = new EigenFluxPollingClient({
-      serverName: 'eigenflux',
-      eigenfluxBin: 'eigenflux',
+    const client = new AliceRealmPollingClient({
+      serverName: 'alicerealm',
+      alicerealmBin: 'alicerealm',
       resolvePollIntervalSec: jest.fn().mockResolvedValue(60),
       logger: createLogger(),
       onHeartbeatStart,
@@ -153,20 +153,20 @@ describe('EigenFluxPollingClient', () => {
     );
     expect(onHeartbeatStart).toHaveBeenCalledTimes(1);
     expect(onHeartbeatStart.mock.invocationCallOrder[0]).toBeLessThan(
-      execEigenfluxMock.mock.invocationCallOrder[0]
+      execAliceRealmMock.mock.invocationCallOrder[0]
     );
   });
 
   test('skips polling when the Heartbeat plan hook fails', async () => {
     const loggerSpies = createLoggerSpies();
-    execEigenfluxMock.mockResolvedValue({
+    execAliceRealmMock.mockResolvedValue({
       kind: 'success',
       data: { items: [], has_more: false, notifications: [] },
     } as CliResult<any>);
 
-    const client = new EigenFluxPollingClient({
-      serverName: 'eigenflux',
-      eigenfluxBin: 'eigenflux',
+    const client = new AliceRealmPollingClient({
+      serverName: 'alicerealm',
+      alicerealmBin: 'alicerealm',
       resolvePollIntervalSec: jest.fn().mockResolvedValue(60),
       logger: createLogger(loggerSpies),
       onHeartbeatStart: jest.fn().mockRejectedValue(new Error('plan unavailable')),
@@ -183,10 +183,10 @@ describe('EigenFluxPollingClient', () => {
   });
 
   test.each([true, false])('plan authentication failure skips Feed and respects notifyAuthRequired=%s', async (notifyAuthRequired) => {
-    execEigenfluxMock.mockClear();
+    execAliceRealmMock.mockClear();
     const onAuthRequired = jest.fn().mockResolvedValue(undefined);
-    const client = new EigenFluxPollingClient({
-      serverName: 'alpha', eigenfluxBin: 'eigenflux',
+    const client = new AliceRealmPollingClient({
+      serverName: 'alpha', alicerealmBin: 'alicerealm',
       resolvePollIntervalSec: jest.fn().mockResolvedValue(60), logger: createLogger(),
       onHeartbeatStart: jest.fn().mockResolvedValue(false),
       onFeedPolled: jest.fn(), onAuthRequired,
@@ -194,28 +194,28 @@ describe('EigenFluxPollingClient', () => {
     await expect(client.pollOnce({ notifyAuthRequired })).resolves.toEqual({
       kind: 'auth_required', authEvent: { reason: 'auth_required' },
     });
-    expect(execEigenfluxMock).not.toHaveBeenCalled();
+    expect(execAliceRealmMock).not.toHaveBeenCalled();
     expect(onAuthRequired).toHaveBeenCalledTimes(notifyAuthRequired ? 1 : 0);
   });
 
   test('failed auth notification does not retry authentication through Feed', async () => {
-    execEigenfluxMock.mockClear();
-    const client = new EigenFluxPollingClient({
-      serverName: 'alpha', eigenfluxBin: 'eigenflux',
+    execAliceRealmMock.mockClear();
+    const client = new AliceRealmPollingClient({
+      serverName: 'alpha', alicerealmBin: 'alicerealm',
       resolvePollIntervalSec: jest.fn().mockResolvedValue(60), logger: createLogger(),
       onHeartbeatStart: jest.fn().mockResolvedValue(false),
       onFeedPolled: jest.fn(), onAuthRequired: jest.fn().mockRejectedValue(new Error('host unavailable')),
     });
     await expect(client.pollOnce()).resolves.toMatchObject({ kind: 'error' });
-    expect(execEigenfluxMock).not.toHaveBeenCalled();
+    expect(execAliceRealmMock).not.toHaveBeenCalled();
   });
 
   test('keeps the plan CLI owner action when stopping before Feed', async () => {
-    execEigenfluxMock.mockClear();
+    execAliceRealmMock.mockClear();
     const stderr = JSON.stringify({ code: 'IDENTITY_UNAVAILABLE', owner_action: 'Restore the original installation files.' });
     const onAuthRequired = jest.fn().mockResolvedValue(undefined);
-    const client = new EigenFluxPollingClient({
-      serverName: 'alpha', eigenfluxBin: 'eigenflux',
+    const client = new AliceRealmPollingClient({
+      serverName: 'alpha', alicerealmBin: 'alicerealm',
       resolvePollIntervalSec: jest.fn().mockResolvedValue(60), logger: createLogger(),
       onHeartbeatStart: jest.fn().mockResolvedValue({ kind: 'auth_required', stderr }),
       onFeedPolled: jest.fn(), onAuthRequired,
@@ -223,21 +223,21 @@ describe('EigenFluxPollingClient', () => {
     await expect(client.pollOnce()).resolves.toEqual({ kind: 'auth_required',
       authEvent: { reason: 'auth_required', stderr } });
     expect(onAuthRequired).toHaveBeenCalledWith({ reason: 'auth_required', stderr });
-    expect(execEigenfluxMock).not.toHaveBeenCalled();
+    expect(execAliceRealmMock).not.toHaveBeenCalled();
   });
 
   test('unavailable credential service stops Feed without a login notification', async () => {
-    execEigenfluxMock.mockClear();
+    execAliceRealmMock.mockClear();
     const error = new Error('503 AGENT_AUTH_UNAVAILABLE');
     const onAuthRequired = jest.fn();
-    const client = new EigenFluxPollingClient({
-      serverName: 'alpha', eigenfluxBin: 'eigenflux',
+    const client = new AliceRealmPollingClient({
+      serverName: 'alpha', alicerealmBin: 'alicerealm',
       resolvePollIntervalSec: jest.fn().mockResolvedValue(60), logger: createLogger(),
       onHeartbeatStart: jest.fn().mockResolvedValue({ kind: 'auth_unavailable', error }),
       onFeedPolled: jest.fn(), onAuthRequired,
     });
     await expect(client.pollOnce()).resolves.toEqual({ kind: 'error', error });
-    expect(execEigenfluxMock).not.toHaveBeenCalled();
+    expect(execAliceRealmMock).not.toHaveBeenCalled();
     expect(onAuthRequired).not.toHaveBeenCalled();
   });
 
@@ -245,14 +245,14 @@ describe('EigenFluxPollingClient', () => {
     const onFeedPolled = jest.fn().mockResolvedValue(undefined);
     const onAuthRequired = jest.fn().mockResolvedValue(undefined);
 
-    execEigenfluxMock.mockResolvedValue({
+    execAliceRealmMock.mockResolvedValue({
       kind: 'auth_required',
       stderr: 'token expired',
     } as CliResult<any>);
 
-    const client = new EigenFluxPollingClient({
-      serverName: 'eigenflux',
-      eigenfluxBin: 'eigenflux',
+    const client = new AliceRealmPollingClient({
+      serverName: 'alicerealm',
+      alicerealmBin: 'alicerealm',
       resolvePollIntervalSec: jest.fn().mockResolvedValue(60),
       logger: createLogger(),
       onFeedPolled,
@@ -278,16 +278,16 @@ describe('EigenFluxPollingClient', () => {
   test('returns error result when CLI command fails', async () => {
     const loggerSpies = createLoggerSpies();
 
-    execEigenfluxMock.mockResolvedValue({
+    execAliceRealmMock.mockResolvedValue({
       kind: 'error',
       error: new Error('connect ECONNREFUSED 127.0.0.1:8080'),
       exitCode: 1,
       stderr: 'connection failed',
     } as CliResult<any>);
 
-    const client = new EigenFluxPollingClient({
-      serverName: 'eigenflux',
-      eigenfluxBin: 'eigenflux',
+    const client = new AliceRealmPollingClient({
+      serverName: 'alicerealm',
+      alicerealmBin: 'alicerealm',
       resolvePollIntervalSec: jest.fn().mockResolvedValue(60),
       logger: createLogger(loggerSpies),
       onFeedPolled: jest.fn().mockResolvedValue(undefined),
@@ -303,11 +303,11 @@ describe('EigenFluxPollingClient', () => {
     const loggerSpies = createLoggerSpies();
     const cliDeferred = createDeferred<CliResult<any>>();
 
-    execEigenfluxMock.mockReturnValue(cliDeferred.promise);
+    execAliceRealmMock.mockReturnValue(cliDeferred.promise);
 
-    const client = new EigenFluxPollingClient({
-      serverName: 'eigenflux',
-      eigenfluxBin: 'eigenflux',
+    const client = new AliceRealmPollingClient({
+      serverName: 'alicerealm',
+      alicerealmBin: 'alicerealm',
       resolvePollIntervalSec: jest.fn().mockResolvedValue(60),
       logger: createLogger(loggerSpies),
       onFeedPolled: jest.fn().mockResolvedValue(undefined),
@@ -317,7 +317,7 @@ describe('EigenFluxPollingClient', () => {
     const firstPoll = client.pollOnce();
     const secondPoll = client.pollOnce();
 
-    expect(execEigenfluxMock).toHaveBeenCalledTimes(1);
+    expect(execAliceRealmMock).toHaveBeenCalledTimes(1);
     expect(loggerSpies.warn).toHaveBeenCalledWith(
       expect.stringContaining(
         'Skipping feed poll because a previous poll is still in progress'
@@ -337,14 +337,14 @@ describe('EigenFluxPollingClient', () => {
   test('does not notify feed callback when items and notifications are empty', async () => {
     const onFeedPolled = jest.fn().mockResolvedValue(undefined);
 
-    execEigenfluxMock.mockResolvedValue({
+    execAliceRealmMock.mockResolvedValue({
       kind: 'success',
       data: { items: [], has_more: false, notifications: [] },
     } as CliResult<any>);
 
-    const client = new EigenFluxPollingClient({
-      serverName: 'eigenflux',
-      eigenfluxBin: 'eigenflux',
+    const client = new AliceRealmPollingClient({
+      serverName: 'alicerealm',
+      alicerealmBin: 'alicerealm',
       resolvePollIntervalSec: jest.fn().mockResolvedValue(60),
       logger: createLogger(),
       onFeedPolled,
@@ -360,14 +360,14 @@ describe('EigenFluxPollingClient', () => {
   test('invokes onPollSuccess on every successful poll, even with empty feed', async () => {
     const onPollSuccess = jest.fn().mockResolvedValue(undefined);
 
-    execEigenfluxMock.mockResolvedValue({
+    execAliceRealmMock.mockResolvedValue({
       kind: 'success',
       data: { items: [], has_more: false, notifications: [] },
     } as CliResult<any>);
 
-    const client = new EigenFluxPollingClient({
-      serverName: 'eigenflux',
-      eigenfluxBin: 'eigenflux',
+    const client = new AliceRealmPollingClient({
+      serverName: 'alicerealm',
+      alicerealmBin: 'alicerealm',
       resolvePollIntervalSec: jest.fn().mockResolvedValue(60),
       logger: createLogger(),
       onFeedPolled: jest.fn().mockResolvedValue(undefined),
@@ -384,14 +384,14 @@ describe('EigenFluxPollingClient', () => {
   test('does not invoke onPollSuccess when CLI returns auth_required', async () => {
     const onPollSuccess = jest.fn().mockResolvedValue(undefined);
 
-    execEigenfluxMock.mockResolvedValue({
+    execAliceRealmMock.mockResolvedValue({
       kind: 'auth_required',
       stderr: 'token expired',
     } as CliResult<any>);
 
-    const client = new EigenFluxPollingClient({
-      serverName: 'eigenflux',
-      eigenfluxBin: 'eigenflux',
+    const client = new AliceRealmPollingClient({
+      serverName: 'alicerealm',
+      alicerealmBin: 'alicerealm',
       resolvePollIntervalSec: jest.fn().mockResolvedValue(60),
       logger: createLogger(),
       onFeedPolled: jest.fn().mockResolvedValue(undefined),
@@ -407,14 +407,14 @@ describe('EigenFluxPollingClient', () => {
     const loggerSpies = createLoggerSpies();
     const onPollSuccess = jest.fn().mockRejectedValue(new Error('report boom'));
 
-    execEigenfluxMock.mockResolvedValue({
+    execAliceRealmMock.mockResolvedValue({
       kind: 'success',
       data: { items: [], has_more: false, notifications: [] },
     } as CliResult<any>);
 
-    const client = new EigenFluxPollingClient({
-      serverName: 'eigenflux',
-      eigenfluxBin: 'eigenflux',
+    const client = new AliceRealmPollingClient({
+      serverName: 'alicerealm',
+      alicerealmBin: 'alicerealm',
       resolvePollIntervalSec: jest.fn().mockResolvedValue(60),
       logger: createLogger(loggerSpies),
       onFeedPolled: jest.fn().mockResolvedValue(undefined),
@@ -435,8 +435,8 @@ describe('EigenFluxPollingClient', () => {
     const reminder = createDeferred<void>();
     const onAuthRequired = jest.fn(() => reminder.promise);
     const resolvePollIntervalSec = jest.fn().mockResolvedValue(60);
-    const client = new EigenFluxPollingClient({
-      serverName: 'local', eigenfluxBin: 'eigenflux', logger: createLogger(),
+    const client = new AliceRealmPollingClient({
+      serverName: 'local', alicerealmBin: 'alicerealm', logger: createLogger(),
       onHeartbeatStart: jest.fn().mockResolvedValue(false),
       onFeedPolled: jest.fn(), onAuthRequired, resolvePollIntervalSec,
     });
@@ -471,8 +471,8 @@ describe('EigenFluxPollingClient', () => {
     jest.useFakeTimers();
     const spies = createLoggerSpies();
     const resolvePollIntervalSec = jest.fn().mockResolvedValue(60);
-    const client = new EigenFluxPollingClient({
-      serverName: 'local', eigenfluxBin: 'eigenflux', logger: createLogger(spies),
+    const client = new AliceRealmPollingClient({
+      serverName: 'local', alicerealmBin: 'alicerealm', logger: createLogger(spies),
       onFeedPolled: jest.fn(), onAuthRequired: jest.fn(), resolvePollIntervalSec,
     });
     jest.spyOn(client, 'pollOnce').mockRejectedValueOnce(new Error('initial poll failed'));
@@ -491,7 +491,7 @@ describe('EigenFluxPollingClient', () => {
   test('re-resolves pollInterval after every poll and reschedules with the new value', async () => {
     jest.useFakeTimers();
     try {
-      execEigenfluxMock.mockResolvedValue({
+      execAliceRealmMock.mockResolvedValue({
         kind: 'success',
         data: { items: [], has_more: false, notifications: [] },
       } as CliResult<any>);
@@ -501,9 +501,9 @@ describe('EigenFluxPollingClient', () => {
         .mockResolvedValueOnce(30)
         .mockResolvedValueOnce(90);
 
-      const client = new EigenFluxPollingClient({
-        serverName: 'eigenflux',
-        eigenfluxBin: 'eigenflux',
+      const client = new AliceRealmPollingClient({
+        serverName: 'alicerealm',
+        alicerealmBin: 'alicerealm',
         resolvePollIntervalSec,
         logger: createLogger(),
         onFeedPolled: jest.fn().mockResolvedValue(undefined),
@@ -515,7 +515,7 @@ describe('EigenFluxPollingClient', () => {
       // Initial poll + first scheduleNext should have consulted the resolver once.
       // Each poll cycle reads the CLI version, then polls.
       expect(resolvePollIntervalSec).toHaveBeenCalledTimes(1);
-      expect(execEigenfluxMock).toHaveBeenCalledTimes(2);
+      expect(execAliceRealmMock).toHaveBeenCalledTimes(2);
 
       // Fire the first scheduled timer → triggers second poll, then resolver again.
       await jest.advanceTimersByTimeAsync(30_000);
@@ -523,7 +523,7 @@ describe('EigenFluxPollingClient', () => {
       await Promise.resolve();
       await Promise.resolve();
 
-      expect(execEigenfluxMock).toHaveBeenCalledTimes(4);
+      expect(execAliceRealmMock).toHaveBeenCalledTimes(4);
       expect(resolvePollIntervalSec).toHaveBeenCalledTimes(2);
 
       client.stop();
@@ -539,47 +539,47 @@ describe('readPollIntervalSec', () => {
   });
 
   test('returns numeric value from CLI when within range', async () => {
-    execEigenfluxMock.mockResolvedValue({ kind: 'success', data: 120 } as CliResult<any>);
+    execAliceRealmMock.mockResolvedValue({ kind: 'success', data: 120 } as CliResult<any>);
 
-    const interval = await readPollIntervalSec('eigenflux', 'eigenflux', createLogger());
+    const interval = await readPollIntervalSec('alicerealm', 'alicerealm', createLogger());
     expect(interval).toBe(120);
-    expect(execEigenfluxMock).toHaveBeenCalledWith(
-      'eigenflux',
-      ['config', 'get', '--key', 'feed_poll_interval', '--server', 'eigenflux', '--format', 'json'],
+    expect(execAliceRealmMock).toHaveBeenCalledWith(
+      'alicerealm',
+      ['config', 'get', '--key', 'feed_poll_interval', '--server', 'alicerealm', '--format', 'json'],
       expect.any(Object)
     );
   });
 
   test('parses numeric string values from CLI', async () => {
-    execEigenfluxMock.mockResolvedValue({ kind: 'success', data: '45' } as CliResult<any>);
-    const interval = await readPollIntervalSec('eigenflux', 'eigenflux', createLogger());
+    execAliceRealmMock.mockResolvedValue({ kind: 'success', data: '45' } as CliResult<any>);
+    const interval = await readPollIntervalSec('alicerealm', 'alicerealm', createLogger());
     expect(interval).toBe(45);
   });
 
   test('falls back to default when CLI returns no value', async () => {
-    execEigenfluxMock.mockResolvedValue({ kind: 'success', data: undefined } as CliResult<any>);
-    const interval = await readPollIntervalSec('eigenflux', 'eigenflux', createLogger());
+    execAliceRealmMock.mockResolvedValue({ kind: 'success', data: undefined } as CliResult<any>);
+    const interval = await readPollIntervalSec('alicerealm', 'alicerealm', createLogger());
     expect(interval).toBe(DEFAULT_POLL_INTERVAL_SEC);
   });
 
   test('falls back to default when CLI errors out', async () => {
-    execEigenfluxMock.mockResolvedValue({
+    execAliceRealmMock.mockResolvedValue({
       kind: 'error',
       error: new Error('boom'),
       exitCode: 1,
       stderr: '',
     } as CliResult<any>);
-    const interval = await readPollIntervalSec('eigenflux', 'eigenflux', createLogger());
+    const interval = await readPollIntervalSec('alicerealm', 'alicerealm', createLogger());
     expect(interval).toBe(DEFAULT_POLL_INTERVAL_SEC);
   });
 
   test('falls back to default when value is below minimum', async () => {
     const spies = createLoggerSpies();
-    execEigenfluxMock.mockResolvedValue({
+    execAliceRealmMock.mockResolvedValue({
       kind: 'success',
       data: MIN_POLL_INTERVAL_SEC - 1,
     } as CliResult<any>);
-    const interval = await readPollIntervalSec('eigenflux', 'eigenflux', createLogger(spies));
+    const interval = await readPollIntervalSec('alicerealm', 'alicerealm', createLogger(spies));
     expect(interval).toBe(DEFAULT_POLL_INTERVAL_SEC);
     expect(spies.warn).toHaveBeenCalledWith(
       expect.stringContaining('outside')
@@ -587,55 +587,55 @@ describe('readPollIntervalSec', () => {
   });
 
   test('falls back to default when value is above maximum', async () => {
-    execEigenfluxMock.mockResolvedValue({
+    execAliceRealmMock.mockResolvedValue({
       kind: 'success',
       data: MAX_POLL_INTERVAL_SEC + 1,
     } as CliResult<any>);
-    const interval = await readPollIntervalSec('eigenflux', 'eigenflux', createLogger());
+    const interval = await readPollIntervalSec('alicerealm', 'alicerealm', createLogger());
     expect(interval).toBe(DEFAULT_POLL_INTERVAL_SEC);
   });
 
   test('falls back to default when value is non-numeric', async () => {
-    execEigenfluxMock.mockResolvedValue({ kind: 'success', data: 'not-a-number' } as CliResult<any>);
-    const interval = await readPollIntervalSec('eigenflux', 'eigenflux', createLogger());
+    execAliceRealmMock.mockResolvedValue({ kind: 'success', data: 'not-a-number' } as CliResult<any>);
+    const interval = await readPollIntervalSec('alicerealm', 'alicerealm', createLogger());
     expect(interval).toBe(DEFAULT_POLL_INTERVAL_SEC);
   });
 });
 
 describe('scheduled Feed gates', () => {
   test.each(['plan_unavailable', 'capacity'] as const)('%s skips Feed and keeps maintenance', async reason => {
-    execEigenfluxMock.mockClear();
+    execAliceRealmMock.mockClear();
     const maintenance=jest.fn().mockResolvedValue(undefined);
-    const client=new EigenFluxPollingClient({serverName:'test',eigenfluxBin:'eigenflux',logger:createLogger(),
+    const client=new AliceRealmPollingClient({serverName:'test',alicerealmBin:'alicerealm',logger:createLogger(),
       resolvePollIntervalSec:async()=>60,onFeedPolled:async()=>{},onAuthRequired:async()=>{},
       onHeartbeatStart:async()=>reason==='plan_unavailable'?{kind:'plan_unavailable'}:true,
       shouldPoll:()=>reason!=='capacity',onPollSkipped:maintenance});
     expect(await client.pollOnce()).toEqual({kind:'skipped',reason});
-    expect(execEigenfluxMock).not.toHaveBeenCalled();expect(maintenance).toHaveBeenCalledTimes(1);
+    expect(execAliceRealmMock).not.toHaveBeenCalled();expect(maintenance).toHaveBeenCalledTimes(1);
   });
   test.each(['0.6.10','0.7.0','0.7.1','0.8.1','unknown','0.7.1-rc.1'])('gates origin for CLI %s and reads the version each cycle', async version => {
-    execEigenfluxMock.mockReset().mockImplementation(async (_bin,args)=>({kind:'success',data:args[0]==='version'?{cli_version:version}:{items:[],notifications:[],has_more:false}}));
-    const client=new EigenFluxPollingClient({serverName:'test',eigenfluxBin:'eigenflux',logger:createLogger(),
+    execAliceRealmMock.mockReset().mockImplementation(async (_bin,args)=>({kind:'success',data:args[0]==='version'?{cli_version:version}:{items:[],notifications:[],has_more:false}}));
+    const client=new AliceRealmPollingClient({serverName:'test',alicerealmBin:'alicerealm',logger:createLogger(),
       resolvePollIntervalSec:async()=>60,onFeedPolled:async()=>{},onAuthRequired:async()=>{}});
     await client.start();
     client.stop();
     await client.pollOnce(); // Join the initial background poll.
     await client.pollOnce();
-    const polls=execEigenfluxMock.mock.calls.filter(call=>call[1].includes('poll'));
+    const polls=execAliceRealmMock.mock.calls.filter(call=>call[1].includes('poll'));
     expect(polls).toHaveLength(2);
-    expect(execEigenfluxMock.mock.calls.filter(call=>call[1][0]==='version')).toHaveLength(2);
+    expect(execAliceRealmMock.mock.calls.filter(call=>call[1][0]==='version')).toHaveLength(2);
     for (const [,argv] of polls) {expect(argv.includes('--batch')).toBe(version==='0.7.1'||version==='0.8.1'); if(argv.includes('--batch'))expect(argv[argv.indexOf('--batch')+1]).toBe('5');expect(argv.includes('--origin')).toBe(version==='0.7.0'||version==='0.7.1'||version==='0.8.1');if(argv.includes('--origin'))expect(argv.slice(-2)).toEqual(['--origin','heartbeat']);}
   });
 
   test('a CLI upgrade or downgrade between cycles flips --origin without restart', async () => {
     let version='0.6.10';
-    execEigenfluxMock.mockReset().mockImplementation(async (_bin,args)=>({kind:'success',data:args[0]==='version'?{cli_version:version}:{items:[],notifications:[],has_more:false}}));
-    const client=new EigenFluxPollingClient({serverName:'test',eigenfluxBin:'eigenflux',logger:createLogger(),
+    execAliceRealmMock.mockReset().mockImplementation(async (_bin,args)=>({kind:'success',data:args[0]==='version'?{cli_version:version}:{items:[],notifications:[],has_more:false}}));
+    const client=new AliceRealmPollingClient({serverName:'test',alicerealmBin:'alicerealm',logger:createLogger(),
       resolvePollIntervalSec:async()=>60,onFeedPolled:async()=>{},onAuthRequired:async()=>{}});
     const originOf=async (options?:{origin:'owner'})=>{
-      execEigenfluxMock.mockClear();
+      execAliceRealmMock.mockClear();
       await client.pollOnce(options);
-      const argv=execEigenfluxMock.mock.calls.find(call=>call[1].includes('poll'))![1];
+      const argv=execAliceRealmMock.mock.calls.find(call=>call[1].includes('poll'))![1];
       expect(argv.includes('--batch')).toBe(version==='0.7.1');
       return argv.includes('--origin')?argv[argv.indexOf('--origin')+1]:null;
     };
@@ -653,15 +653,15 @@ describe('scheduled Feed gates', () => {
     ['a missing cli_version', async () => ({kind:'success',data:{}})],
     ['a thrown call', async () => { throw new Error('spawn failed'); }],
   ] as const)('omits --origin when the version read returns %s', async (_label, readVersion) => {
-    execEigenfluxMock.mockReset().mockImplementation(async (_bin,args)=>args[0]==='version'
+    execAliceRealmMock.mockReset().mockImplementation(async (_bin,args)=>args[0]==='version'
       ? (readVersion as () => Promise<any>)()
       : ({kind:'success',data:{items:[],notifications:[],has_more:false}}));
-    const client=new EigenFluxPollingClient({serverName:'test',eigenfluxBin:'eigenflux',logger:createLogger(),
+    const client=new AliceRealmPollingClient({serverName:'test',alicerealmBin:'alicerealm',logger:createLogger(),
       resolvePollIntervalSec:async()=>60,onFeedPolled:async()=>{},onAuthRequired:async()=>{}});
     for (const options of [undefined,{origin:'owner' as const}]) {
-      execEigenfluxMock.mockClear();
+      execAliceRealmMock.mockClear();
       expect((await client.pollOnce(options)).kind).toBe('success');
-      const argv=execEigenfluxMock.mock.calls.find(call=>call[1].includes('poll'))![1];
+      const argv=execAliceRealmMock.mock.calls.find(call=>call[1].includes('poll'))![1];
       expect(argv).not.toContain('--origin');
     }
   });
@@ -669,8 +669,8 @@ describe('scheduled Feed gates', () => {
   test('warns once after consecutive plan_unavailable skips and logs recovery once', async () => {
     const spies=createLoggerSpies();
     let planAvailable=false;
-    execEigenfluxMock.mockReset().mockResolvedValue({kind:'success',data:{items:[],notifications:[],has_more:false}});
-    const client=new EigenFluxPollingClient({serverName:'test',eigenfluxBin:'eigenflux',logger:createLogger(spies),
+    execAliceRealmMock.mockReset().mockResolvedValue({kind:'success',data:{items:[],notifications:[],has_more:false}});
+    const client=new AliceRealmPollingClient({serverName:'test',alicerealmBin:'alicerealm',logger:createLogger(spies),
       resolvePollIntervalSec:async()=>60,onFeedPolled:async()=>{},onAuthRequired:async()=>{},
       onHeartbeatStart:async()=>planAvailable?true:{kind:'plan_unavailable'}});
     const pausedWarnings=()=>spies.warn.mock.calls.filter(([message])=>String(message).includes('Feed polling is paused')).length;
@@ -681,7 +681,7 @@ describe('scheduled Feed gates', () => {
     await client.pollOnce();
     expect(pausedWarnings()).toBe(1);
     expect(spies.warn.mock.calls.find(([message])=>String(message).includes('Feed polling is paused'))![0])
-      .toMatch(/heartbeat plan is unavailable.*update the EigenFlux CLI/);
+      .toMatch(/heartbeat plan is unavailable.*update the AliceRealm CLI/);
     await client.pollOnce();await client.pollOnce();
     expect(pausedWarnings()).toBe(1);
 
@@ -701,8 +701,8 @@ describe('scheduled Feed gates', () => {
     const spies=createLoggerSpies();
     const starts=[{kind:'plan_unavailable'},{kind:'plan_unavailable'},true,{kind:'plan_unavailable'},{kind:'plan_unavailable'}] as const;
     let index=0;
-    execEigenfluxMock.mockReset().mockResolvedValue({kind:'success',data:{items:[],notifications:[],has_more:false}});
-    const client=new EigenFluxPollingClient({serverName:'test',eigenfluxBin:'eigenflux',logger:createLogger(spies),
+    execAliceRealmMock.mockReset().mockResolvedValue({kind:'success',data:{items:[],notifications:[],has_more:false}});
+    const client=new AliceRealmPollingClient({serverName:'test',alicerealmBin:'alicerealm',logger:createLogger(spies),
       resolvePollIntervalSec:async()=>60,onFeedPolled:async()=>{},onAuthRequired:async()=>{},
       onHeartbeatStart:async()=>starts[index++] as any});
     for (let cycle=0; cycle<starts.length; cycle++) await client.pollOnce();
@@ -715,15 +715,15 @@ describe('scheduled Feed gates', () => {
 test('an owner poll waits for scheduled maintenance then fetches independently', async () => {
   let release!:()=>void;
   const maintenance=new Promise<void>(resolve=>{release=resolve;});
-  execEigenfluxMock.mockReset().mockResolvedValue({kind:'success',data:{items:[],notifications:[],has_more:false}});
-  const client=new EigenFluxPollingClient({serverName:'test',eigenfluxBin:'eigenflux',logger:createLogger(),
+  execAliceRealmMock.mockReset().mockResolvedValue({kind:'success',data:{items:[],notifications:[],has_more:false}});
+  const client=new AliceRealmPollingClient({serverName:'test',alicerealmBin:'alicerealm',logger:createLogger(),
     resolvePollIntervalSec:async()=>60,onFeedPolled:async()=>{},onAuthRequired:async()=>{},
     shouldPoll:()=>false,onPollSkipped:()=>maintenance});
   const scheduled=client.pollOnce();
   const owner=client.pollOnce({origin:'owner',notifyFeed:false});
-  expect(execEigenfluxMock).not.toHaveBeenCalled();
+  expect(execAliceRealmMock).not.toHaveBeenCalled();
   release();
   expect(await scheduled).toEqual({kind:'skipped',reason:'capacity'});
   expect((await owner).kind).toBe('success');
-  expect(execEigenfluxMock.mock.calls.filter(call=>call[1].includes('poll'))).toHaveLength(1);
+  expect(execAliceRealmMock.mock.calls.filter(call=>call[1].includes('poll'))).toHaveLength(1);
 });
