@@ -7,30 +7,30 @@ import { buildJsonPluginConfigSchema, definePluginEntry } from 'openclaw/plugin-
 import type { PluginLogger } from 'openclaw/plugin-sdk/plugin-entry';
 
 import {
-  EigenFluxPollingClient,
+  AliceRealmPollingClient,
   readPollIntervalSec,
   type AuthRequiredEvent,
   type FeedResponse,
 } from './polling-client';
 import { OrderNotifications } from './order-notifications';
 import { createOrderNotificationRequest } from './order-notification-api';
-import { EigenFluxStreamClient, type PmStreamEvent } from './stream-client';
-import { EigenFluxProfileRefresher } from './profile-refresher';
+import { AliceRealmStreamClient, type PmStreamEvent } from './stream-client';
+import { AliceRealmProfileRefresher } from './profile-refresher';
 import { collectOpenClawContext, resolveOpenClawStateDir, EMPTY_CONTEXT } from './openclaw-context';
-import { EigenFluxSettingsReporter } from './settings-reporter';
+import { AliceRealmSettingsReporter } from './settings-reporter';
 import { resolveRuntimeHost } from './runtime-identity';
 import { registerRuntimeModelHooks } from './runtime-model';
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 import { Logger } from './logger';
 import { CredentialsLoader } from './credentials-loader';
 import {
   PLUGIN_CONFIG,
   resolvePluginConfig,
-  resolveEigenfluxHome,
+  resolveAliceRealmHome,
   discoverServers,
   getInstalledCliVersion,
   isCliOutdated,
-  type ResolvedEigenFluxPluginConfig,
+  type ResolvedAliceRealmPluginConfig,
   type RoutingConfig,
   type DiscoveredServer,
   type DiscoveryResult,
@@ -44,11 +44,11 @@ import {
   buildOutdatedPromptTemplate,
   buildPmStreamEventPromptTemplate,
   buildOrderNotificationPromptTemplate,
-  type EigenFluxPromptServerContext,
+  type AliceRealmPromptServerContext,
 } from './agent-prompt-templates';
 import { FeedPushScheduler } from './feed-push-scheduler';
-import { EigenFluxHeartbeatPlanRunner, type HeartbeatExecutionPlan } from './heartbeat-plan-runner';
-import { EigenFluxNotifier } from './notifier';
+import { AliceRealmHeartbeatPlanRunner, type HeartbeatExecutionPlan } from './heartbeat-plan-runner';
+import { AliceRealmNotifier } from './notifier';
 import { AuthNotificationGate } from './auth-notification-gate';
 import { buildPmLane, buildPmSessionKey, splitPmEventByConversation } from './pm-delivery';
 
@@ -93,15 +93,15 @@ type ServerRuntime = {
   server: DiscoveredServer;
   routing: RoutingConfig;
   credentialsLoader: CredentialsLoader;
-  notifier: EigenFluxNotifier;
-  feedPoller: EigenFluxPollingClient;
-  streamClient: EigenFluxStreamClient;
+  notifier: AliceRealmNotifier;
+  feedPoller: AliceRealmPollingClient;
+  streamClient: AliceRealmStreamClient;
   orderNotifications: OrderNotifications;
-  profileRefresher: EigenFluxProfileRefresher;
-  settingsReporter: EigenFluxSettingsReporter;
+  profileRefresher: AliceRealmProfileRefresher;
+  settingsReporter: AliceRealmSettingsReporter;
   flushLoop: FeedbackFlushLoop;
   feedPushScheduler: FeedPushScheduler;
-  getPromptContext: () => EigenFluxPromptServerContext;
+  getPromptContext: () => AliceRealmPromptServerContext;
   waitForPendingDelivery: () => Promise<void>;
 };
 
@@ -150,7 +150,7 @@ async function refreshOpenClawSkillsSnapshot(logger: Logger): Promise<void> {
     const runtime = await import(moduleName) as {
       bumpSkillsSnapshotVersion?: (params: { reason: string }) => number;
     };
-    runtime.bumpSkillsSnapshotVersion?.({ reason: 'eigenflux-skills-sync' });
+    runtime.bumpSkillsSnapshotVersion?.({ reason: 'alicerealm-skills-sync' });
     logger.debug('OpenClaw Skills snapshot refreshed');
   } catch (err) {
     logger.debug(`OpenClaw Skills snapshot refresh unavailable: ${String(err)}`);
@@ -158,13 +158,13 @@ async function refreshOpenClawSkillsSnapshot(logger: Logger): Promise<void> {
 }
 
 export async function syncPluginSkills(
-  eigenfluxBin: string,
+  alicerealmBin: string,
   logger: Logger,
   refreshSnapshot: SkillsSnapshotRefresher = () => refreshOpenClawSkillsSnapshot(logger)
 ): Promise<void> {
   try {
-    const res = await execEigenflux(
-      eigenfluxBin,
+    const res = await execAliceRealm(
+      alicerealmBin,
       ['skills', 'sync', '--if-stale', '--quiet', '--host', 'openclaw'],
       { logger, parseJson: false }
     );
@@ -183,16 +183,16 @@ function registerPlugin(api: OpenClawPluginApi): void {
   const logger = new Logger(resolvePluginLogger(api));
 
   const pluginConfig = resolvePluginConfig(api.pluginConfig, logger);
-  const eigenfluxHome = resolveEigenfluxHome(api.rootDir);
+  const alicerealmHome = resolveAliceRealmHome(api.rootDir);
   logger.info(
-    `EigenFlux home resolved: path=${eigenfluxHome}, source=${process.env.EIGENFLUX_HOME ? 'EIGENFLUX_HOME env' : api.rootDir ? 'api.rootDir' : 'os.homedir()'}, rootDir=${api.rootDir ?? 'undefined'}, homedir=${os.homedir()}`
+    `AliceRealm home resolved: path=${alicerealmHome}, source=${process.env.ALICEREALM_HOME ? 'ALICEREALM_HOME env' : api.rootDir ? 'api.rootDir' : 'os.homedir()'}, rootDir=${api.rootDir ?? 'undefined'}, homedir=${os.homedir()}`
   );
   // Set once at startup so all CLI child processes inherit it automatically.
-  process.env.EIGENFLUX_HOME = eigenfluxHome;
-  process.env.EIGENFLUX_HOST = resolveRuntimeHost(api.runtime?.version, process.env.EIGENFLUX_HOST_OVERRIDE);
-  process.env.EIGENFLUX_MODE = 'plugin';
-  process.env.EIGENFLUX_PLUGIN_VERSION = PLUGIN_CONFIG.PLUGIN_VERSION;
-  logger.info(`Client env: EIGENFLUX_HOST=${process.env.EIGENFLUX_HOST}`);
+  process.env.ALICEREALM_HOME = alicerealmHome;
+  process.env.ALICEREALM_HOST = resolveRuntimeHost(api.runtime?.version, process.env.ALICEREALM_HOST_OVERRIDE);
+  process.env.ALICEREALM_MODE = 'plugin';
+  process.env.ALICEREALM_PLUGIN_VERSION = PLUGIN_CONFIG.PLUGIN_VERSION;
+  logger.info(`Client env: ALICEREALM_HOST=${process.env.ALICEREALM_HOST}`);
   const store = createInMemoryPluginStore();
 
   let runtimes: ServerRuntime[] = [];
@@ -217,7 +217,7 @@ function registerPlugin(api: OpenClawPluginApi): void {
       if (wasStopping || stopping || revision !== lifecycleRevision) return runtimes;
       if (runtimes.length === 0) {
         runtimes = servers.map((server) =>
-          createServerRuntime(api, logger, pluginConfig, server, eigenfluxHome, store)
+          createServerRuntime(api, logger, pluginConfig, server, alicerealmHome, store)
         );
       }
       return runtimes;
@@ -229,34 +229,34 @@ function registerPlugin(api: OpenClawPluginApi): void {
     const commitRuntimes = prepareRuntimeCommit();
     let discovery: DiscoveryResult;
     try {
-      discovery = await discoverServers(pluginConfig.eigenfluxBin, logger);
+      discovery = await discoverServers(pluginConfig.alicerealmBin, logger);
     } catch (error) {
       discovery = { kind: 'error', error: String(error), retryable: true };
     }
     if (!cycle.active) return;
     if (discovery.kind === 'not_installed') {
       logger.warn(
-        `EigenFlux discovery not ready: CLI not installed (bin=${discovery.bin}); no automatic retry`
+        `AliceRealm discovery not ready: CLI not installed (bin=${discovery.bin}); no automatic retry`
       );
       if (!notInstalledPromptDelivered) {
         notInstalledPromptDelivered = true;
-        await deliverNotInstalledPrompt(api, logger, pluginConfig, eigenfluxHome, discovery.bin, store);
+        await deliverNotInstalledPrompt(api, logger, pluginConfig, alicerealmHome, discovery.bin, store);
       }
       return;
     }
     if (discovery.kind === 'error') {
       const delay = DISCOVERY_RETRY_DELAYS_MS[cycle.attempts - 1];
       if (discovery.retryable && delay !== undefined) {
-        logger.warn(`EigenFlux discovery not ready (attempt ${cycle.attempts}/4): ${discovery.error}; retrying in ${delay / 1000}s`);
+        logger.warn(`AliceRealm discovery not ready (attempt ${cycle.attempts}/4): ${discovery.error}; retrying in ${delay / 1000}s`);
         cycle.timer = setTimeout(() => {
           cycle.timer = undefined;
           if (!cycle.active) return;
           cycle.inFlight = attemptDiscovery(cycle);
-          void cycle.inFlight.catch((error) => logger.error(`EigenFlux discovery startup failed: ${String(error)}`));
+          void cycle.inFlight.catch((error) => logger.error(`AliceRealm discovery startup failed: ${String(error)}`));
         }, delay);
         cycle.timer.unref?.();
       } else {
-        logger.error(`EigenFlux discovery not ready after ${cycle.attempts} attempt(s): ${discovery.error}; ${discovery.retryable ? 'automatic retries exhausted' : 'automatic retry disabled'}. Resolve the error and restart the EigenFlux service.`);
+        logger.error(`AliceRealm discovery not ready after ${cycle.attempts} attempt(s): ${discovery.error}; ${discovery.retryable ? 'automatic retries exhausted' : 'automatic retry disabled'}. Resolve the error and restart the AliceRealm service.`);
       }
       return;
     }
@@ -264,22 +264,22 @@ function registerPlugin(api: OpenClawPluginApi): void {
     // Pull the latest signed bundle into OpenClaw's user-level Skills dir.
     // Non-blocking and offline-safe; a successful sync refreshes the Skills
     // snapshot for the next agent turn.
-    void syncPluginSkills(pluginConfig.eigenfluxBin, logger);
+    void syncPluginSkills(pluginConfig.alicerealmBin, logger);
 
     const servers = discovery.servers;
     if (servers.length === 0) {
-      logger.info('EigenFlux discovery completed with no configured servers; services remain idle, no automatic retry');
+      logger.info('AliceRealm discovery completed with no configured servers; services remain idle, no automatic retry');
       return;
     }
 
     logger.info(`Discovered ${servers.length} server(s): ${servers.map((s) => s.name).join(', ')}`);
 
-    // Derive EIGENFLUX_CHANNEL from the first server's routing config.
-    if (!process.env.EIGENFLUX_CHANNEL) {
+    // Derive ALICEREALM_CHANNEL from the first server's routing config.
+    if (!process.env.ALICEREALM_CHANNEL) {
       const firstRouting = pluginConfig.serverRouting[servers[0].name];
       const channel = firstRouting?.replyChannel;
-      process.env.EIGENFLUX_CHANNEL = channel || 'openclaw';
-      logger.info(`Client env: EIGENFLUX_CHANNEL=${process.env.EIGENFLUX_CHANNEL} (source=${channel ? 'routing.replyChannel' : 'default'})`);
+      process.env.ALICEREALM_CHANNEL = channel || 'openclaw';
+      logger.info(`Client env: ALICEREALM_CHANNEL=${process.env.ALICEREALM_CHANNEL} (source=${channel ? 'routing.replyChannel' : 'default'})`);
     }
 
     const discoveredRuntimes = commitRuntimes(servers);
@@ -295,18 +295,18 @@ function registerPlugin(api: OpenClawPluginApi): void {
       runtime.orderNotifications.start();
       runtime.flushLoop.start();
     }
-    logger.info(`EigenFlux discovery ready: services started for ${discoveredRuntimes.length} server(s)`);
+    logger.info(`AliceRealm discovery ready: services started for ${discoveredRuntimes.length} server(s)`);
 
     // CLI is installed and running; if it's older than this plugin expects,
     // nudge the agent to update it (informational — services keep running on
     // the current version; the agent performs the update at runtime).
     if (!outdatedPromptDelivered) {
-      const installedVersion = await getInstalledCliVersion(pluginConfig.eigenfluxBin, logger);
+      const installedVersion = await getInstalledCliVersion(pluginConfig.alicerealmBin, logger);
       if (!cycle.active) return;
       if (isCliOutdated(installedVersion, PLUGIN_CONFIG.EXPECTED_CLI_VERSION)) {
         outdatedPromptDelivered = true;
         logger.warn(
-          `EigenFlux CLI outdated (installed=${installedVersion}, expected>=${PLUGIN_CONFIG.EXPECTED_CLI_VERSION}); delivering upgrade prompt`
+          `AliceRealm CLI outdated (installed=${installedVersion}, expected>=${PLUGIN_CONFIG.EXPECTED_CLI_VERSION}); delivering upgrade prompt`
         );
         await deliverOutdatedPrompt(
           api,
@@ -322,7 +322,7 @@ function registerPlugin(api: OpenClawPluginApi): void {
 
   // One bounded discovery cycle per service lifecycle; empty configurations stay idle.
   api.registerService({
-    id: 'eigenflux:discovery',
+    id: 'alicerealm:discovery',
     start: async () => {
       const revision = lifecycleRevision;
       if (stopping) await stopping;
@@ -331,7 +331,7 @@ function registerPlugin(api: OpenClawPluginApi): void {
         await lifecycle.inFlight;
         return;
       }
-      logger.info('Starting EigenFlux discovery service...');
+      logger.info('Starting AliceRealm discovery service...');
       const cycle: DiscoveryLifecycle = { active: true, attempts: 0 };
       lifecycle = cycle;
       cycle.inFlight = attemptDiscovery(cycle);
@@ -341,7 +341,7 @@ function registerPlugin(api: OpenClawPluginApi): void {
       lifecycleRevision++;
       if (stopping) return stopping;
       if (!lifecycle?.active && runtimes.length === 0) return;
-      logger.info('Stopping EigenFlux discovery service...');
+      logger.info('Stopping AliceRealm discovery service...');
       if (lifecycle) {
         lifecycle.active = false;
         if (lifecycle.timer) clearTimeout(lifecycle.timer);
@@ -369,7 +369,7 @@ function registerPlugin(api: OpenClawPluginApi): void {
     },
   });
 
-  registerFollowupTool(api, logger, pluginConfig.eigenfluxBin, () => runtimes);
+  registerFollowupTool(api, logger, pluginConfig.alicerealmBin, () => runtimes);
 
   registerCommand(
     api,
@@ -382,19 +382,19 @@ function registerPlugin(api: OpenClawPluginApi): void {
 }
 
 /**
- * Register the eigenflux__followup tool with the OpenClaw agent runtime. The
- * handler is a thin shell that shells out to `eigenflux feed event record`;
+ * Register the alicerealm__followup tool with the OpenClaw agent runtime. The
+ * handler is a thin shell that shells out to `alicerealm feed event record`;
  * the server is selected via a server_id arg (or the only server when one
  * exists). All verification/enrichment/dedup/queueing lives in the CLI.
  */
 function registerFollowupTool(
   api: OpenClawPluginApi,
   logger: Logger,
-  eigenfluxBin: string,
+  alicerealmBin: string,
   getRuntimes: () => ServerRuntime[]
 ): void {
   if (!api.registerTool) {
-    logger.warn('registerTool API unavailable; skipping eigenflux__followup tool');
+    logger.warn('registerTool API unavailable; skipping alicerealm__followup tool');
     return;
   }
 
@@ -445,10 +445,10 @@ function registerFollowupTool(
 
   try {
     api.registerTool({
-      name: 'eigenflux__followup',
-      label: 'EigenFlux feedback',
+      name: 'alicerealm__followup',
+      label: 'AliceRealm feedback',
       description:
-        'Adapter for eigenflux feed event record. Use according to the current EigenFlux Skills and CLI plan. ' +
+        'Adapter for alicerealm feed event record. Use according to the current AliceRealm Skills and CLI plan. ' +
         'Pass item identifiers and event arguments through to the CLI.',
       parameters,
       execute: async (_toolCallId: string, params: unknown) => {
@@ -464,12 +464,12 @@ function registerFollowupTool(
           const text = JSON.stringify({ ok: false, error: 'no_runtime' });
           return { content: [{ type: 'text', text }], details: { ok: false } };
         }
-        // Thin shell: shell out to `eigenflux feed event record`; the CLI owns
+        // Thin shell: shell out to `alicerealm feed event record`; the CLI owns
         // verification/enrichment/dedup/queueing. Nudge the flush loop so the
         // just-recorded event drains promptly.
         const result = await handleFollowup(
           {
-            eigenfluxBin,
+            alicerealmBin,
             serverName: runtime.server.name,
             logger,
           },
@@ -482,10 +482,10 @@ function registerFollowupTool(
         };
       },
     } as never);
-    logger.info('Registered eigenflux__followup tool');
+    logger.info('Registered alicerealm__followup tool');
   } catch (err) {
     logger.warn(
-      `Failed to register eigenflux__followup tool: ${err instanceof Error ? err.message : String(err)}`
+      `Failed to register alicerealm__followup tool: ${err instanceof Error ? err.message : String(err)}`
     );
   }
 }
@@ -501,7 +501,7 @@ function resolvePluginLogger(api: OpenClawPluginApi): PluginLogger {
 
   if (runtimeLogging && typeof runtimeLogging.getChildLogger === 'function') {
     try {
-      const child = runtimeLogging.getChildLogger({ plugin: 'eigenflux' });
+      const child = runtimeLogging.getChildLogger({ plugin: 'alicerealm' });
       if (child) {
         return child as PluginLogger;
       }
@@ -516,7 +516,7 @@ const PLUGIN_CONFIG_SCHEMA = buildJsonPluginConfigSchema({
   type: 'object',
   additionalProperties: false,
   properties: {
-    eigenfluxBin: { type: 'string' },
+    alicerealmBin: { type: 'string' },
     openclawCliBin: { type: 'string' },
     skills: { type: 'array', items: { type: 'string' } },
     serverRouting: {
@@ -537,9 +537,9 @@ const PLUGIN_CONFIG_SCHEMA = buildJsonPluginConfigSchema({
 });
 
 export default definePluginEntry({
-  id: 'openclaw-eigenflux',
-  name: 'EigenFlux',
-  description: 'OpenClaw extension for EigenFlux with CLI-based feed polling and PM streaming',
+  id: 'openclaw-alicerealm',
+  name: 'AliceRealm',
+  description: 'OpenClaw extension for AliceRealm with CLI-based feed polling and PM streaming',
   configSchema: PLUGIN_CONFIG_SCHEMA,
   register(api) {
     if (api.registrationMode && api.registrationMode !== 'full') return;
@@ -547,20 +547,20 @@ export default definePluginEntry({
   },
 });
 
-const INSTALL_COMMAND = 'curl -fsSL https://eigenflux.ai/install.sh | bash';
-const INSTALL_GUIDANCE = `Read ${INSTALL_ENTRY_URL} and follow it to install EigenFlux for this OpenClaw Agent.`;
+const INSTALL_COMMAND = 'curl -fsSL https://alicerealm.ai/install.sh | bash';
+const INSTALL_GUIDANCE = `Read ${INSTALL_ENTRY_URL} and follow it to install AliceRealm for this OpenClaw Agent.`;
 
 async function deliverNotInstalledPrompt(
   api: OpenClawPluginApi,
   logger: Logger,
-  pluginConfig: ResolvedEigenFluxPluginConfig,
-  _eigenfluxHome: string,
+  pluginConfig: ResolvedAliceRealmPluginConfig,
+  _alicerealmHome: string,
   bin: string,
   store: PluginRuntimeStore
 ): Promise<void> {
   // Intentionally no workdir: the bootstrap notifier must not read or persist
-  // any remembered session route under <eigenfluxHome>/bootstrap.
-  const notifier = new EigenFluxNotifier(api, logger, {
+  // any remembered session route under <alicerealmHome>/bootstrap.
+  const notifier = new AliceRealmNotifier(api, logger, {
     sessionKey: DEFAULT_ROUTING.sessionKey,
     agentId: DEFAULT_ROUTING.agentId,
     replyChannel: DEFAULT_ROUTING.replyChannel,
@@ -578,14 +578,14 @@ async function deliverNotInstalledPrompt(
 async function deliverOutdatedPrompt(
   api: OpenClawPluginApi,
   logger: Logger,
-  pluginConfig: ResolvedEigenFluxPluginConfig,
+  pluginConfig: ResolvedAliceRealmPluginConfig,
   installed: string,
   expected: string,
   _store: PluginRuntimeStore
 ): Promise<void> {
   // Same bootstrap notifier as deliverNotInstalledPrompt: no workdir, default
   // routing — this is a one-off nudge, not a per-server feed delivery.
-  const notifier = new EigenFluxNotifier(api, logger, {
+  const notifier = new AliceRealmNotifier(api, logger, {
     sessionKey: DEFAULT_ROUTING.sessionKey,
     agentId: DEFAULT_ROUTING.agentId,
     replyChannel: DEFAULT_ROUTING.replyChannel,
@@ -602,20 +602,20 @@ async function deliverOutdatedPrompt(
 
 /** Dedicated session key for feed delivery, isolated from the main DM session. */
 function buildFeedSessionKey(serverName: string): string {
-  return `eigenflux:feed:${serverName}`;
+  return `alicerealm:feed:${serverName}`;
 }
 
 function createServerRuntime(
   api: OpenClawPluginApi,
   logger: Logger,
-  pluginConfig: ResolvedEigenFluxPluginConfig,
+  pluginConfig: ResolvedAliceRealmPluginConfig,
   server: DiscoveredServer,
-  eigenfluxHome: string,
+  alicerealmHome: string,
   store: PluginRuntimeStore
 ): ServerRuntime {
   const routing = pluginConfig.serverRouting[server.name] ?? DEFAULT_ROUTING;
 
-  const credentialsLoader = new CredentialsLoader(logger, eigenfluxHome, server.name);
+  const credentialsLoader = new CredentialsLoader(logger, alicerealmHome, server.name);
 
   // Feedback collection is downsunk into the CLI (`feed event record` verifies
   // item_ids against its own broadcast cache, enriches, dedups, queues on disk,
@@ -623,13 +623,13 @@ function createServerRuntime(
   // retry cadence below, which drives `feed event flush` with back-off.
   const flushLoop = new FeedbackFlushLoop({
     serverName: server.name,
-    eigenfluxBin: pluginConfig.eigenfluxBin,
+    alicerealmBin: pluginConfig.alicerealmBin,
     logger,
   });
 
-  const notifier = new EigenFluxNotifier(api, logger, {
+  const notifier = new AliceRealmNotifier(api, logger, {
     store,
-    eigenfluxBin: pluginConfig.eigenfluxBin,
+    alicerealmBin: pluginConfig.alicerealmBin,
     serverName: server.name,
     sessionKey: routing.sessionKey,
     agentId: routing.agentId,
@@ -640,9 +640,9 @@ function createServerRuntime(
     routeOverrides: routing.routeOverrides,
   });
 
-  const getPromptContext = (): EigenFluxPromptServerContext => ({
+  const getPromptContext = (): AliceRealmPromptServerContext => ({
     serverName: server.name,
-    eigenfluxHome,
+    alicerealmHome,
   });
 
   const authNotificationGate = new AuthNotificationGate();
@@ -659,20 +659,20 @@ function createServerRuntime(
   };
 
   // Pushes the agent's runtime mode to the backend once per heartbeat via the
-  // eigenflux CLI (`settings push`). The CLI handles change-detection, dedup,
+  // alicerealm CLI (`settings push`). The CLI handles change-detection, dedup,
   // and reading feed_delivery_preference from its own config. Best-effort:
   // never interrupts polling.
-  const settingsReporter = new EigenFluxSettingsReporter({
+  const settingsReporter = new AliceRealmSettingsReporter({
     serverName: server.name,
-    eigenfluxBin: pluginConfig.eigenfluxBin,
+    alicerealmBin: pluginConfig.alicerealmBin,
     logger,
   });
   let heartbeatAuthRequired = false;
   let heartbeatAuthDetail: string | undefined;
   let heartbeatAuthUnavailable: Error | undefined;
-  const heartbeatPlanRunner = new EigenFluxHeartbeatPlanRunner({
-    eigenfluxBin: pluginConfig.eigenfluxBin,
-    eigenfluxHome,
+  const heartbeatPlanRunner = new AliceRealmHeartbeatPlanRunner({
+    alicerealmBin: pluginConfig.alicerealmBin,
+    alicerealmHome,
     serverName: server.name,
     logger,
     onAuthRequired: (stderr) => { heartbeatAuthRequired = true; heartbeatAuthDetail = stderr; },
@@ -713,9 +713,9 @@ function createServerRuntime(
   // See FeedPushScheduler for the full policy.
   const feedPushScheduler = new FeedPushScheduler({
     isBusy: async () =>
-      feedDeliveryInFlight || (!process.env.EIGENFLUX_FEED_DELIVERY && await notifier.isMainRouteBusy(FEED_RECENT_ACTIVITY_MS)),
+      feedDeliveryInFlight || (!process.env.ALICEREALM_FEED_DELIVERY && await notifier.isMainRouteBusy(FEED_RECENT_ACTIVITY_MS)),
     pushNow: async (prompt) => {
-      const mode = process.env.EIGENFLUX_FEED_DELIVERY;
+      const mode = process.env.ALICEREALM_FEED_DELIVERY;
       if (mode === 'system-event') {
         if (!await notifier.deliverToMainSession(prompt)) throw new Error('Main-session delivery was not accepted');
         return;
@@ -743,24 +743,24 @@ function createServerRuntime(
     feedPushScheduler.schedule(prompt);
   };
 
-  const orderAgentPath = path.join(eigenfluxHome, 'servers', server.name, 'agent-v2-credentials.json');
+  const orderAgentPath = path.join(alicerealmHome, 'servers', server.name, 'agent-v2-credentials.json');
   const orderAgentID = fs.existsSync(orderAgentPath)
     ? String(JSON.parse(fs.readFileSync(orderAgentPath, 'utf8')).agent_id ?? '') : '';
   const orderNotifications = new OrderNotifications(createOrderNotificationRequest({
-    eigenfluxBin: pluginConfig.eigenfluxBin, eigenfluxHome, serverName: server.name,
+    alicerealmBin: pluginConfig.alicerealmBin, alicerealmHome, serverName: server.name,
     endpoint: server.endpoint, agentID: orderAgentID, logger,
   }), (notification, receipt, checkpoint) => notifier.deliverOrder(buildOrderNotificationPromptTemplate(notification, getPromptContext()), {
     key: `${server.name}:${orderAgentID}:${notification.notification_id}`, receipt, checkpoint,
   }), /^[1-9]\d*$/.test(orderAgentID)
-    ? path.join(eigenfluxHome, 'servers', server.name, 'data', `order-notifications-${orderAgentID}.json`)
+    ? path.join(alicerealmHome, 'servers', server.name, 'data', `order-notifications-${orderAgentID}.json`)
     : undefined);
 
-  const feedPoller = new EigenFluxPollingClient({
+  const feedPoller = new AliceRealmPollingClient({
     resolveModel: () => settingsReporter.getObservedModel(),
     serverName: server.name,
-    eigenfluxBin: pluginConfig.eigenfluxBin,
+    alicerealmBin: pluginConfig.alicerealmBin,
     resolvePollIntervalSec: () =>
-      readPollIntervalSec(pluginConfig.eigenfluxBin, server.name, logger),
+      readPollIntervalSec(pluginConfig.alicerealmBin, server.name, logger),
     logger,
     onHeartbeatStart: async () => {
       heartbeatAuthRequired = false;
@@ -805,10 +805,10 @@ function createServerRuntime(
     onAuthRequired: notifyAuthRequired,
   });
 
-  const streamClient = new EigenFluxStreamClient({
+  const streamClient = new AliceRealmStreamClient({
     serverName: server.name,
-    eigenfluxHome,
-    eigenfluxBin: pluginConfig.eigenfluxBin,
+    alicerealmHome,
+    alicerealmBin: pluginConfig.alicerealmBin,
     logger,
     onPmEvent: async (event: PmStreamEvent) => {
       resetAuthPromptGate();
@@ -845,9 +845,9 @@ function createServerRuntime(
     },
   });
 
-  const profileRefresher = new EigenFluxProfileRefresher({
+  const profileRefresher = new AliceRealmProfileRefresher({
     serverName: server.name,
-    eigenfluxBin: pluginConfig.eigenfluxBin,
+    alicerealmBin: pluginConfig.alicerealmBin,
     logger,
     collectContext: () => {
       const stateDir = resolveOpenClawStateDir(logger);
@@ -892,13 +892,13 @@ function createServerRuntime(
 function registerCommand(
   api: OpenClawPluginApi,
   logger: Logger,
-  pluginConfig: ResolvedEigenFluxPluginConfig,
+  pluginConfig: ResolvedAliceRealmPluginConfig,
   store: PluginRuntimeStore,
   getRuntimes: () => ServerRuntime[],
   prepareRuntimeCommit: () => (servers: DiscoveredServer[]) => ServerRuntime[]
 ): void {
   if (!api.registerCommand) {
-    logger.warn('registerCommand API unavailable; skipping /eigenflux command registration');
+    logger.warn('registerCommand API unavailable; skipping /alicerealm command registration');
     return;
   }
 
@@ -912,12 +912,12 @@ function registerCommand(
 
   const runDiscovery = async (): Promise<EnsureRuntimesResult> => {
     const commitRuntimes = prepareRuntimeCommit();
-    const discovery = await discoverServers(pluginConfig.eigenfluxBin, logger);
+    const discovery = await discoverServers(pluginConfig.alicerealmBin, logger);
     if (discovery.kind === 'not_installed') {
       return { runtimes: getRuntimes(), notInstalledBin: discovery.bin };
     }
     if (discovery.kind === 'error') {
-      logger.error(`EigenFlux command discovery failed: ${discovery.error}`);
+      logger.error(`AliceRealm command discovery failed: ${discovery.error}`);
       return { runtimes: getRuntimes(), discoveryError: discovery.error };
     }
     if (discovery.servers.length === 0) {
@@ -940,15 +940,15 @@ function registerCommand(
   };
 
   api.registerCommand({
-    name: 'eigenflux',
-    description: 'EigenFlux plugin commands: auth, profile, refresh, servers, feed, pm, here, version',
+    name: 'alicerealm',
+    description: 'AliceRealm plugin commands: auth, profile, refresh, servers, feed, pm, here, version',
     acceptsArgs: true,
     handler: async (ctx) => {
       const parsed = parseCommandArgs(ctx.args);
 
       if (parsed.command === 'version') {
         return {
-          text: await buildVersionText(pluginConfig.eigenfluxBin),
+          text: await buildVersionText(pluginConfig.alicerealmBin),
         };
       }
 
@@ -956,11 +956,11 @@ function registerCommand(
 
       if (notInstalledBin && runtimes.length === 0) {
         return {
-          text: `EigenFlux CLI not installed (bin=${notInstalledBin}). ${INSTALL_GUIDANCE}`,
+          text: `AliceRealm CLI not installed (bin=${notInstalledBin}). ${INSTALL_GUIDANCE}`,
         };
       }
       if (discoveryError && runtimes.length === 0) {
-        return { text: `EigenFlux server discovery failed: ${discoveryError}. Check Gateway logs and retry this command after resolving the error.` };
+        return { text: `AliceRealm server discovery failed: ${discoveryError}. Check Gateway logs and retry this command after resolving the error.` };
       }
 
       if (parsed.command === 'servers') {
@@ -986,7 +986,7 @@ function registerCommand(
           };
         case 'profile':
           return {
-            text: await buildProfileText(runtime, pluginConfig.eigenfluxBin),
+            text: await buildProfileText(runtime, pluginConfig.alicerealmBin),
           };
         case 'refresh': {
           // Request an immediate profile review through the CLI,
@@ -1063,7 +1063,7 @@ function selectServerRuntime(
 ): ServerRuntimeSelection {
   if (runtimes.length === 0) {
     return {
-      error: 'No EigenFlux servers discovered. Ensure eigenflux CLI is configured with at least one server.',
+      error: 'No AliceRealm servers discovered. Ensure alicerealm CLI is configured with at least one server.',
     };
   }
 
@@ -1083,7 +1083,7 @@ function selectServerRuntime(
 
   return {
     error: [
-      `Unknown EigenFlux server: ${requestedServerName}`,
+      `Unknown AliceRealm server: ${requestedServerName}`,
       `Available servers: ${runtimes.map((item) => item.server.name).join(', ')}`,
     ].join('\n'),
   };
@@ -1091,11 +1091,11 @@ function selectServerRuntime(
 
 function buildServersText(runtimes: ServerRuntime[]): string {
   if (runtimes.length === 0) {
-    return 'No EigenFlux servers discovered.';
+    return 'No AliceRealm servers discovered.';
   }
 
   return [
-    'EigenFlux servers (discovered via CLI):',
+    'AliceRealm servers (discovered via CLI):',
     ...runtimes.map((runtime) => {
       const flags = [
         runtime.server.current ? 'default' : null,
@@ -1114,20 +1114,20 @@ function buildHelpText(runtimes: ServerRuntime[]): string {
   const availableCommands = Array.from(COMMAND_NAME_SET).join('|');
 
   return [
-    `Usage: /eigenflux [--server <name>] <${availableCommands}>`,
+    `Usage: /alicerealm [--server <name>] <${availableCommands}>`,
     defaultRuntime ? `Default server: ${defaultRuntime.server.name}` : undefined,
     runtimes.length > 0
       ? `Available servers: ${runtimes.map((runtime) => runtime.server.name).join(', ')}`
       : undefined,
     '',
-    '/eigenflux auth — Show credential status',
-    '/eigenflux profile — Fetch agent profile',
-    '/eigenflux refresh — Check for a due profile refresh task now',
-    '/eigenflux servers — List discovered servers',
-    '/eigenflux feed — Run one feed refresh',
-    '/eigenflux pm — Show PM stream status',
-    '/eigenflux here — Remember current conversation as delivery route',
-    '/eigenflux version — Show eigenflux CLI version info',
+    '/alicerealm auth — Show credential status',
+    '/alicerealm profile — Fetch agent profile',
+    '/alicerealm refresh — Check for a due profile refresh task now',
+    '/alicerealm servers — List discovered servers',
+    '/alicerealm feed — Run one feed refresh',
+    '/alicerealm pm — Show PM stream status',
+    '/alicerealm here — Remember current conversation as delivery route',
+    '/alicerealm version — Show alicerealm CLI version info',
   ]
     .filter(Boolean)
     .join('\n');
@@ -1199,17 +1199,17 @@ async function buildHereText(
   if (!route || !route.replyChannel || !route.replyTo) {
     return [
       `Unable to resolve the current external session for server=${runtime.server.name}.`,
-      'Run `/eigenflux here` inside the target conversation after OpenClaw has already created a session for it.',
+      'Run `/alicerealm here` inside the target conversation after OpenClaw has already created a session for it.',
     ].join('\n');
   }
 
   const saved = await writeStoredNotificationRoute(store, runtime.server.name, route, logger);
   if (!saved) {
-    return `Failed to persist the current EigenFlux route for server=${runtime.server.name}; check plugin logs for details.`;
+    return `Failed to persist the current AliceRealm route for server=${runtime.server.name}; check plugin logs for details.`;
   }
 
   return [
-    `EigenFlux server ${runtime.server.name} will deliver to this conversation by default:`,
+    `AliceRealm server ${runtime.server.name} will deliver to this conversation by default:`,
     `sessionKey: ${route.sessionKey}`,
     `agentId: ${route.agentId}`,
     `channel: ${route.replyChannel ?? 'unknown'}`,
@@ -1242,7 +1242,7 @@ async function rememberCurrentCommandRouteIfPossible(
 
 function buildAuthStatusText(runtime: ServerRuntime): string {
   const authState = runtime.credentialsLoader.loadAuthState();
-  const lines = [`EigenFlux auth status (server=${runtime.server.name}):`];
+  const lines = [`AliceRealm auth status (server=${runtime.server.name}):`];
   lines.push(`- credentials_path: ${authState.credentialsPath}`);
   lines.push(`- status: ${authState.status}`);
   if (authState.expiresAt) {
@@ -1258,10 +1258,10 @@ function buildAuthStatusText(runtime: ServerRuntime): string {
 
 async function buildProfileText(
   runtime: ServerRuntime,
-  eigenfluxBin: string
+  alicerealmBin: string
 ): Promise<string> {
-  const result = await execEigenflux<JsonApiSuccess<ProfileResponseData>>(
-    eigenfluxBin,
+  const result = await execAliceRealm<JsonApiSuccess<ProfileResponseData>>(
+    alicerealmBin,
     ['profile', 'show', '-s', runtime.server.name, '-f', 'json']
   );
 
@@ -1269,14 +1269,14 @@ async function buildProfileText(
     return buildAuthRequiredPromptTemplate({ context: runtime.getPromptContext() });
   }
   if (result.kind === 'not_installed') {
-    return `EigenFlux CLI not installed (bin=${result.bin}). ${INSTALL_GUIDANCE}`;
+    return `AliceRealm CLI not installed (bin=${result.bin}). ${INSTALL_GUIDANCE}`;
   }
   if (result.kind === 'error') {
     return `Failed to fetch profile for server ${runtime.server.name}: ${result.error.message}`;
   }
 
   return [
-    `EigenFlux profile (server=${runtime.server.name}):`,
+    `AliceRealm profile (server=${runtime.server.name}):`,
     '```json',
     safeJsonStringify(result.data),
     '```',
@@ -1292,7 +1292,7 @@ async function buildFeedText(runtime: ServerRuntime): Promise<string> {
   switch (result.kind) {
     case 'success':
       return [
-        `EigenFlux feed result (server=${runtime.server.name}):`,
+        `AliceRealm feed result (server=${runtime.server.name}):`,
         '```json',
         safeJsonStringify(result.payload),
         '```',
@@ -1300,35 +1300,35 @@ async function buildFeedText(runtime: ServerRuntime): Promise<string> {
     case 'auth_required':
       return buildAuthRequiredPromptTemplate({ context: runtime.getPromptContext() });
     case 'error':
-      return `EigenFlux feed failed for server ${runtime.server.name}: ${result.error.message}`;
+      return `AliceRealm feed failed for server ${runtime.server.name}: ${result.error.message}`;
     default:
-      return `EigenFlux feed finished with an unknown result for server ${runtime.server.name}.`;
+      return `AliceRealm feed finished with an unknown result for server ${runtime.server.name}.`;
   }
 }
 
-async function buildVersionText(eigenfluxBin: string): Promise<string> {
-  const result = await execEigenflux<unknown>(eigenfluxBin, ['version']);
+async function buildVersionText(alicerealmBin: string): Promise<string> {
+  const result = await execAliceRealm<unknown>(alicerealmBin, ['version']);
 
   if (result.kind === 'not_installed') {
-    return `EigenFlux CLI not installed (bin=${result.bin}). ${INSTALL_GUIDANCE}`;
+    return `AliceRealm CLI not installed (bin=${result.bin}). ${INSTALL_GUIDANCE}`;
   }
   if (result.kind === 'auth_required') {
-    return `EigenFlux CLI reported auth_required while fetching version (stderr: ${result.stderr || 'n/a'}).`;
+    return `AliceRealm CLI reported auth_required while fetching version (stderr: ${result.stderr || 'n/a'}).`;
   }
   if (result.kind === 'error') {
-    return `Failed to fetch eigenflux version: ${result.error.message}`;
+    return `Failed to fetch alicerealm version: ${result.error.message}`;
   }
 
   const body =
     typeof result.data === 'string' ? result.data : safeJsonStringify(result.data);
-  return ['EigenFlux CLI version:', '```json', body, '```'].join('\n');
+  return ['AliceRealm CLI version:', '```json', body, '```'].join('\n');
 }
 
 function buildPmStatusText(runtime: ServerRuntime): string {
   const running = runtime.streamClient.isRunning();
   const cursor = runtime.streamClient.getLastCursor();
 
-  const lines = [`EigenFlux PM stream status (server=${runtime.server.name}):`];
+  const lines = [`AliceRealm PM stream status (server=${runtime.server.name}):`];
   lines.push(`- streaming: ${running ? 'active' : 'inactive'}`);
   if (cursor) {
     lines.push(`- last_cursor: ${cursor}`);

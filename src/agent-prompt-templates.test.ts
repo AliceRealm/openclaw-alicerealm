@@ -7,29 +7,29 @@ import {
   buildFeedPayloadPromptTemplate,
   buildHeartbeatExecutionPromptTemplate,
   buildPmStreamEventPromptTemplate,
-  type EigenFluxPromptServerContext,
+  type AliceRealmPromptServerContext,
 } from './agent-prompt-templates';
 
 describe('agent prompt templates', () => {
-  const context: EigenFluxPromptServerContext = {
+  const context: AliceRealmPromptServerContext = {
     serverName: 'alpha',
-    eigenfluxHome: '/tmp/.eigenflux',
+    alicerealmHome: '/tmp/.alicerealm',
   };
 
   test('routes first connection and account recovery to their Skills with server context', () => {
     const prompt = buildAuthRequiredPromptTemplate({ context });
 
-    expect(prompt).toContain('[EIGENFLUX_AUTH_REQUIRED]');
-    expect(prompt).toContain('homedir=/tmp/.eigenflux');
+    expect(prompt).toContain('[ALICEREALM_AUTH_REQUIRED]');
+    expect(prompt).toContain('homedir=/tmp/.alicerealm');
     expect(prompt).toContain('server=alpha');
-    expect(prompt).toContain('EigenFlux authentication is required.');
+    expect(prompt).toContain('AliceRealm authentication is required.');
     expect(prompt).toContain('Deliver a visible warning to the owner');
     expect(prompt).toContain('checks have stopped');
     expect(prompt).toContain('next action from the current Skill');
     expect(prompt).toContain('Do not suppress this warning');
-    expect(prompt).toContain('first connection, load the installed ef-onboarding Skill');
-    expect(prompt).toContain('existing account, load the installed ef-profile Skill');
-    expect(prompt).toContain('https://github.com/phronesis-io/eigenflux/blob/main/skills/install.md');
+    expect(prompt).toContain('first connection, load the installed ar-onboarding Skill');
+    expect(prompt).toContain('existing account, load the installed ar-profile Skill');
+    expect(prompt).toContain('https://github.com/AliceRealm/alicerealm/blob/main/skills/install.md');
     expect(prompt).toContain('Keep the homedir and server above');
     expect(prompt).not.toContain('auth login');
   });
@@ -44,9 +44,9 @@ describe('agent prompt templates', () => {
   });
 
   test('preserves the CLI owner action and requests a concrete localized next step', () => {
-    const ownerAction = 'Reply "Recover my current EigenFlux account" to authorize foreground recovery.';
+    const ownerAction = 'Reply "Recover my current AliceRealm account" to authorize foreground recovery.';
     const detail = JSON.stringify({ schema_version: 'eigenflux_auth_required.v1',
-      code: 'REFRESH_INVALID', home: context.eigenfluxHome, server: context.serverName,
+      code: 'REFRESH_INVALID', home: context.alicerealmHome, server: context.serverName,
       owner_action: ownerAction });
     const prompt = buildAuthRequiredPromptTemplate({ context, stderr: detail });
     expect(prompt).toContain(detail);
@@ -70,44 +70,44 @@ describe('agent prompt templates', () => {
       context
     );
 
-    expect(prompt).toContain('[EIGENFLUX_FEED_PAYLOAD]');
-    expect(prompt).toContain('homedir=/tmp/.eigenflux');
+    expect(prompt).toContain('[ALICEREALM_FEED_PAYLOAD]');
+    expect(prompt).toContain('homedir=/tmp/.alicerealm');
     expect(prompt).toContain('server=alpha');
-    expect(prompt).toContain('ef-broadcast skill');
+    expect(prompt).toContain('ar-broadcast skill');
   });
 
   test('builds an executable heartbeat around the plugin-owned feed payload', () => {
     const prompt = buildHeartbeatExecutionPromptTemplate(
-      'EIGENFLUX HEARTBEAT PLAN\nExecute in this exact order: Commands → Feed → Attention.',
+      'ALICEREALM HEARTBEAT PLAN\nExecute in this exact order: Commands → Feed → Attention.',
       { code: 0, msg: 'ok', data: { items: [], has_more: false, notifications: [] } },
       context
     );
 
-    expect(prompt).toContain('[EIGENFLUX_HEARTBEAT]');
+    expect(prompt).toContain('[ALICEREALM_HEARTBEAT]');
     expect(prompt).toContain('do not run another feed poll');
     expect(prompt).toContain('OpenClaw delivers only the final reply');
     expect(prompt).toContain('intermediate commentary is not delivery');
     expect(prompt).toContain('never replace the content with a warning or completion summary');
     expect(prompt).toContain('Attention');
-    expect(prompt).toContain('[EIGENFLUX_FEED_PAYLOAD]');
+    expect(prompt).toContain('[ALICEREALM_FEED_PAYLOAD]');
   });
 
   test('missing central contract keeps the payload and current Skill reference without inventing rules', () => {
-    const root = mkdtempSync(join(tmpdir(), 'eigenflux-claw-missing-skills-'));
-    const previous = process.env.EIGENFLUX_SKILLS_DIR;
-    process.env.EIGENFLUX_SKILLS_DIR = root;
+    const root = mkdtempSync(join(tmpdir(), 'alicerealm-claw-missing-skills-'));
+    const previous = process.env.ALICEREALM_SKILLS_DIR;
+    process.env.ALICEREALM_SKILLS_DIR = root;
     try {
       const prompt = buildFeedPayloadPromptTemplate(
         { code: 0, msg: 'ok', data: { items: [{ item_id: '17', broadcast_type: 'info', updated_at: 1 }], has_more: false, notifications: [] } },
         context
       );
-      expect(prompt).toContain('ef-broadcast skill');
+      expect(prompt).toContain('ar-broadcast skill');
       expect(prompt).toContain('"item_id": "17"');
       expect(prompt).not.toContain('OUTPUT CONTRACT');
       expect(prompt).not.toContain('Submit feedback');
     } finally {
-      if (previous === undefined) delete process.env.EIGENFLUX_SKILLS_DIR;
-      else process.env.EIGENFLUX_SKILLS_DIR = previous;
+      if (previous === undefined) delete process.env.ALICEREALM_SKILLS_DIR;
+      else process.env.ALICEREALM_SKILLS_DIR = previous;
       rmSync(root, { recursive: true, force: true });
     }
   });
@@ -126,12 +126,12 @@ describe('agent prompt templates', () => {
   });
 
   test('reads the fallback contract from the CLI-synced host Skills directory', () => {
-    const root = mkdtempSync(join(tmpdir(), 'eigenflux-claw-skills-'));
-    const contractDir = join(root, 'ef-broadcast', 'references');
+    const root = mkdtempSync(join(tmpdir(), 'alicerealm-claw-skills-'));
+    const contractDir = join(root, 'ar-broadcast', 'references');
     mkdirSync(contractDir, { recursive: true });
     writeFileSync(join(contractDir, 'contract.md'), 'SYNCED HOST CONTRACT');
-    const previous = process.env.EIGENFLUX_SKILLS_DIR;
-    process.env.EIGENFLUX_SKILLS_DIR = root;
+    const previous = process.env.ALICEREALM_SKILLS_DIR;
+    process.env.ALICEREALM_SKILLS_DIR = root;
 
     try {
       const prompt = buildFeedPayloadPromptTemplate(
@@ -147,8 +147,8 @@ describe('agent prompt templates', () => {
       expect(updated).toContain('UPDATED CENTRAL CONTRACT');
       expect(updated).not.toContain('SYNCED HOST CONTRACT');
     } finally {
-      if (previous === undefined) delete process.env.EIGENFLUX_SKILLS_DIR;
-      else process.env.EIGENFLUX_SKILLS_DIR = previous;
+      if (previous === undefined) delete process.env.ALICEREALM_SKILLS_DIR;
+      else process.env.ALICEREALM_SKILLS_DIR = previous;
       rmSync(root, { recursive: true, force: true });
     }
   });
@@ -162,7 +162,7 @@ describe('agent prompt templates', () => {
           items: [],
           has_more: false,
           notifications: [],
-          output_contract: 'SERVER CONTRACT vTest — follow these rules. 📡 Powered by EigenFlux',
+          output_contract: 'SERVER CONTRACT vTest — follow these rules. 📡 Powered by AliceRealm',
         },
       },
       context
@@ -216,11 +216,11 @@ describe('agent prompt templates', () => {
       context
     );
 
-    expect(prompt).toContain('[EIGENFLUX_MSG_PAYLOAD]');
-    expect(prompt).toContain('homedir=/tmp/.eigenflux');
+    expect(prompt).toContain('[ALICEREALM_MSG_PAYLOAD]');
+    expect(prompt).toContain('homedir=/tmp/.alicerealm');
     expect(prompt).toContain('server=alpha');
     expect(prompt).toContain('private message(s)');
-    expect(prompt).toContain('ef-communication skill to process them');
+    expect(prompt).toContain('ar-communication skill to process them');
   });
 
   test('summarizes incoming friend requests', () => {
@@ -243,9 +243,9 @@ describe('agent prompt templates', () => {
       context
     );
 
-    expect(prompt).toContain('[EIGENFLUX_MSG_PAYLOAD]');
+    expect(prompt).toContain('[ALICEREALM_MSG_PAYLOAD]');
     expect(prompt).toContain('incoming friend request(s)');
-    expect(prompt).toContain('ef-communication skill to process them');
+    expect(prompt).toContain('ar-communication skill to process them');
   });
 
   test('summarizes friend_accepted events', () => {
@@ -257,7 +257,7 @@ describe('agent prompt templates', () => {
       context
     );
 
-    expect(prompt).toContain('[EIGENFLUX_MSG_PAYLOAD]');
+    expect(prompt).toContain('[ALICEREALM_MSG_PAYLOAD]');
     expect(prompt).toContain('friend request response(s)');
   });
 });
@@ -265,7 +265,7 @@ describe('agent prompt templates', () => {
 test('saved batch delivery preserves metadata and points to local continuation', () => {
   const payload = {code: 0, msg: 'ok', data: {items: [], notifications: [], has_more: false,
     output_contract: 'contract', local_batch: {source: 'local', backlog: 10}}};
-  const context = {serverName: 'alpha', eigenfluxHome: '/tmp/.eigenflux'};
+  const context = {serverName: 'alpha', alicerealmHome: '/tmp/.alicerealm'};
   const prompt = buildHeartbeatExecutionPromptTemplate('plan', payload, context);
   expect(prompt).toContain('This payload is batch 1 of a saved page (local_batch). Process further batches with feed next as the Skill directs.');
   expect(prompt).toContain('"backlog": 10');

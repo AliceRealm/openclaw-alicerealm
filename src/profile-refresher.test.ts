@@ -1,21 +1,21 @@
-import { EigenFluxProfileRefresher, type ProfileRefresherConfig } from './profile-refresher';
+import { AliceRealmProfileRefresher, type ProfileRefresherConfig } from './profile-refresher';
 import { Logger } from './logger';
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 
 jest.mock('./cli-executor');
-const execMock = execEigenflux as jest.MockedFunction<typeof execEigenflux>;
+const execMock = execAliceRealm as jest.MockedFunction<typeof execAliceRealm>;
 const context = { memoryDirs: ['/host/memory'], sessionSnippets: ['Host conversation context'] };
 
 function setup(overrides: Partial<ProfileRefresherConfig> = {}) {
   const logger = new Logger({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() });
   const config: ProfileRefresherConfig = {
-    serverName: 'alpha', eigenfluxBin: '/bin/eigenflux', logger,
+    serverName: 'alpha', alicerealmBin: '/bin/alicerealm', logger,
     collectContext: () => context,
     onRefreshPrompt: jest.fn().mockResolvedValue(undefined),
     onAuthRequired: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   };
-  return { config, adapter: new EigenFluxProfileRefresher(config) };
+  return { config, adapter: new AliceRealmProfileRefresher(config) };
 }
 
 beforeEach(() => execMock.mockReset());
@@ -25,7 +25,7 @@ test('heartbeat passes host context to the CLI and delivers its task verbatim', 
   execMock.mockResolvedValue({ kind: 'success', data: 'CENTRAL TASK: read current Skills' });
   adapter.start();
   await adapter.tick();
-  expect(execMock).toHaveBeenCalledWith('/bin/eigenflux', [
+  expect(execMock).toHaveBeenCalledWith('/bin/alicerealm', [
     'profile', 'refresh-task', '-s', 'alpha', '--format', 'agent',
     '--memory-dir', '/host/memory', '--session-snippet', 'Host conversation context',
   ], { logger: config.logger, parseJson: false });
@@ -147,7 +147,7 @@ test.each(['auth_required', 'error', 'not_installed'] as const)('%s does not int
   const { config, adapter } = setup();
   execMock.mockResolvedValue(kind === 'auth_required'
     ? { kind, stderr: 'expired' }
-    : kind === 'not_installed' ? { kind, bin: '/bin/eigenflux' }
+    : kind === 'not_installed' ? { kind, bin: '/bin/alicerealm' }
       : { kind, error: new Error('scope unavailable'), exitCode: 2, stderr: 'scope unavailable' });
   adapter.start();
   await expect(adapter.tick()).resolves.toBeUndefined();

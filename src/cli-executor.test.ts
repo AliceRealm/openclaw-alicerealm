@@ -1,4 +1,4 @@
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 import { Logger } from './logger';
 
 const unavailableNotice = {
@@ -8,23 +8,23 @@ const unavailableNotice = {
 };
 
 function failingCli(stderr: string, exitCode = 2) {
-  return execEigenflux(process.execPath, [
+  return execAliceRealm(process.execPath, [
     '-e', 'process.stderr.write(process.argv[1]); process.exit(Number(process.argv[2]))',
     stderr, String(exitCode),
   ]);
 }
 
-describe('execEigenflux', () => {
+describe('execAliceRealm', () => {
   test('preserves only maintenance diagnostics from a successful command', async () => {
     const logs = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
-    const stderr = 'private unrelated stderr\r\n[eigenflux:maintenance] record_failed attempt=abc\r\n'
-      + 'prefix [eigenflux:maintenance] not a diagnostic\n[eigenflux:maintenance] upload_pending attempt=abc\n';
-    await expect(execEigenflux(process.execPath, [
+    const stderr = 'private unrelated stderr\r\n[alicerealm:maintenance] record_failed attempt=abc\r\n'
+      + 'prefix [alicerealm:maintenance] not a diagnostic\n[alicerealm:maintenance] upload_pending attempt=abc\n';
+    await expect(execAliceRealm(process.execPath, [
       '-e', 'process.stderr.write(process.argv[1]); console.log(JSON.stringify({ok:true}))', stderr,
     ], { logger: new Logger(logs) })).resolves.toEqual({ kind: 'success', data: { ok: true } });
     expect(logs.warn.mock.calls).toEqual([
-      ['[EigenFlux] [eigenflux:maintenance] record_failed attempt=abc'],
-      ['[EigenFlux] [eigenflux:maintenance] upload_pending attempt=abc'],
+      ['[AliceRealm] [alicerealm:maintenance] record_failed attempt=abc'],
+      ['[AliceRealm] [alicerealm:maintenance] upload_pending attempt=abc'],
     ]);
   });
 
@@ -67,34 +67,34 @@ describe('execEigenflux', () => {
   });
 
   test('per-child model overrides preserve parent metadata without mutating the Gateway', async () => {
-    const savedModel = process.env.EIGENFLUX_MODEL;
-    const savedChannel = process.env.EIGENFLUX_CHANNEL;
-    process.env.EIGENFLUX_MODEL = 'unrelated-model';
-    process.env.EIGENFLUX_CHANNEL = 'openclaw';
+    const savedModel = process.env.ALICEREALM_MODEL;
+    const savedChannel = process.env.ALICEREALM_CHANNEL;
+    process.env.ALICEREALM_MODEL = 'unrelated-model';
+    process.env.ALICEREALM_CHANNEL = 'openclaw';
     try {
-      const script = 'console.log(JSON.stringify({model:process.env.EIGENFLUX_MODEL,channel:process.env.EIGENFLUX_CHANNEL}))';
-      expect(await execEigenflux(process.execPath, ['-e', script]))
+      const script = 'console.log(JSON.stringify({model:process.env.ALICEREALM_MODEL,channel:process.env.ALICEREALM_CHANNEL}))';
+      expect(await execAliceRealm(process.execPath, ['-e', script]))
         .toEqual({ kind: 'success', data: { channel: 'openclaw' } });
-      expect(await execEigenflux(process.execPath, ['-e', script], { env: { EIGENFLUX_CHANNEL: 'scoped-channel' } }))
+      expect(await execAliceRealm(process.execPath, ['-e', script], { env: { ALICEREALM_CHANNEL: 'scoped-channel' } }))
         .toEqual({ kind: 'success', data: { channel: 'scoped-channel' } });
-      expect(await execEigenflux(process.execPath, ['-e', script], { env: { EIGENFLUX_MODEL: 'owned-model' } }))
+      expect(await execAliceRealm(process.execPath, ['-e', script], { env: { ALICEREALM_MODEL: 'owned-model' } }))
         .toEqual({ kind: 'success', data: { model: 'owned-model', channel: 'openclaw' } });
-      expect(await execEigenflux(process.execPath, ['-e', script], { env: { EIGENFLUX_MODEL: undefined } }))
+      expect(await execAliceRealm(process.execPath, ['-e', script], { env: { ALICEREALM_MODEL: undefined } }))
         .toEqual({ kind: 'success', data: { channel: 'openclaw' } });
-      expect(process.env.EIGENFLUX_MODEL).toBe('unrelated-model');
+      expect(process.env.ALICEREALM_MODEL).toBe('unrelated-model');
     } finally {
-      if (savedModel === undefined) delete process.env.EIGENFLUX_MODEL; else process.env.EIGENFLUX_MODEL = savedModel;
-      if (savedChannel === undefined) delete process.env.EIGENFLUX_CHANNEL; else process.env.EIGENFLUX_CHANNEL = savedChannel;
+      if (savedModel === undefined) delete process.env.ALICEREALM_MODEL; else process.env.ALICEREALM_MODEL = savedModel;
+      if (savedChannel === undefined) delete process.env.ALICEREALM_CHANNEL; else process.env.ALICEREALM_CHANNEL = savedChannel;
     }
   });
   test('returns not_installed when the binary cannot be spawned (ENOENT)', async () => {
-    const result = await execEigenflux(
-      '/tmp/definitely-not-a-real-binary-eigenflux-xyz',
+    const result = await execAliceRealm(
+      '/tmp/definitely-not-a-real-binary-alicerealm-xyz',
       ['server', 'list', '--format', 'json']
     );
     expect(result.kind).toBe('not_installed');
     if (result.kind === 'not_installed') {
-      expect(result.bin).toBe('/tmp/definitely-not-a-real-binary-eigenflux-xyz');
+      expect(result.bin).toBe('/tmp/definitely-not-a-real-binary-alicerealm-xyz');
     }
   });
 });

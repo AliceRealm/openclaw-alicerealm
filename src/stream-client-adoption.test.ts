@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { EigenFluxStreamClient, type PmStreamEvent } from './stream-client';
+import { AliceRealmStreamClient, type PmStreamEvent } from './stream-client';
 import { Logger } from './logger';
 
 const logger = () => new Logger({ info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() });
@@ -18,8 +18,8 @@ async function until(check: () => boolean): Promise<void> {
   }
 }
 function fixture() {
-  const home = mkdtempSync(join(tmpdir(), 'eigenflux-claw-adopt-'));
-  const bin = join(home, 'eigenflux');
+  const home = mkdtempSync(join(tmpdir(), 'alicerealm-claw-adopt-'));
+  const bin = join(home, 'alicerealm');
   const versionPath = join(home, 'version');
   const logPath = join(home, 'processes');
   writeFileSync(versionPath, '0.6.6');
@@ -34,7 +34,7 @@ process.on('SIGTERM',()=>{
   console.log(JSON.stringify({type:'tail',data:{version,next_cursor:'358859368915009536'}}));
   setTimeout(()=>{record('exit');process.exit(0)},80);
 });
-console.log(JSON.stringify({type:'ready',data:{version,pid:process.pid,args:process.argv.slice(2),home:process.env.EIGENFLUX_HOME}}));
+console.log(JSON.stringify({type:'ready',data:{version,pid:process.pid,args:process.argv.slice(2),home:process.env.ALICEREALM_HOME}}));
 setInterval(()=>{},1000);
 `, { mode: 0o700 });
   return {
@@ -49,7 +49,7 @@ test('unknown stream adopts a modern plan after delivery, trailing stdout and ac
   const first = deferred();
   const tail = deferred();
   const events: PmStreamEvent[] = [];
-  const client = new EigenFluxStreamClient({ eigenfluxBin: f.bin, eigenfluxHome: f.home,
+  const client = new AliceRealmStreamClient({ alicerealmBin: f.bin, alicerealmHome: f.home,
     serverName: 'stable-server', logger: logger(), onAuthRequired: async () => {},
     onPmEvent: async event => {
       events.push(event);
@@ -89,7 +89,7 @@ test('stop during delayed version adoption prevents any replacement or late hear
   const f = fixture();
   const delivery = deferred();
   let received = false;
-  const client = new EigenFluxStreamClient({ eigenfluxBin: f.bin, eigenfluxHome: f.home,
+  const client = new AliceRealmStreamClient({ alicerealmBin: f.bin, alicerealmHome: f.home,
     serverName: 'stable-server', logger: logger(), onAuthRequired: async () => {},
     onPmEvent: async event => { if (event.type === 'ready') { received = true; await delivery.promise; } },
   });
@@ -110,7 +110,7 @@ test('stop during delayed version adoption prevents any replacement or late hear
 test('legacy and invalid plans leave the existing stream intact', async () => {
   const f = fixture();
   const events: PmStreamEvent[] = [];
-  const client = new EigenFluxStreamClient({ eigenfluxBin: f.bin, eigenfluxHome: f.home,
+  const client = new AliceRealmStreamClient({ alicerealmBin: f.bin, alicerealmHome: f.home,
     serverName: 'stable-server', logger: logger(), onAuthRequired: async () => {},
     onPmEvent: async event => { events.push(event); },
   });
@@ -126,7 +126,7 @@ test('slow host delivery defers adoption within a deadline and remains retryable
   const f = fixture();
   const delivery = deferred();
   let received = false;
-  const client = new EigenFluxStreamClient({ eigenfluxBin: f.bin, eigenfluxHome: f.home,
+  const client = new AliceRealmStreamClient({ alicerealmBin: f.bin, alicerealmHome: f.home,
     serverName: 'stable-server', logger: logger(), onAuthRequired: async () => {},
     onPmEvent: async event => { if (event.type === 'ready' && event.data.version === '0.6.6') { received = true; await delivery.promise; } },
   });
@@ -149,7 +149,7 @@ test('slow host delivery defers adoption within a deadline and remains retryable
 test('an unconfirmed close after forced termination never starts an overlapping stream', async () => {
   jest.useFakeTimers();
   const kill = jest.fn().mockReturnValue(true);
-  const client = new EigenFluxStreamClient({ eigenfluxBin: 'unused', serverName: 'stable', logger: logger(),
+  const client = new AliceRealmStreamClient({ alicerealmBin: 'unused', serverName: 'stable', logger: logger(),
     onAuthRequired: async () => {}, onPmEvent: async () => {},
   });
   const internals = client as any;
@@ -174,7 +174,7 @@ test('an unconfirmed close after forced termination never starts an overlapping 
 
 test('service stop has a bounded wait for a stalled host delivery', async () => {
   jest.useFakeTimers();
-  const client = new EigenFluxStreamClient({ eigenfluxBin: 'unused', serverName: 'stable', logger: logger(),
+  const client = new AliceRealmStreamClient({ alicerealmBin: 'unused', serverName: 'stable', logger: logger(),
     onAuthRequired: async () => {}, onPmEvent: async () => {},
   });
   (client as any).running = true;
@@ -190,7 +190,7 @@ test('service stop has a bounded wait for a stalled host delivery', async () => 
 test('late reconnect callbacks cannot spawn another child over an active replacement', async () => {
   const f = fixture();
   let ready = false;
-  const client = new EigenFluxStreamClient({ eigenfluxBin: f.bin, eigenfluxHome: f.home,
+  const client = new AliceRealmStreamClient({ alicerealmBin: f.bin, alicerealmHome: f.home,
     serverName: 'stable-server', logger: logger(), onAuthRequired: async () => {},
     onPmEvent: async event => { if (event.type === 'ready') ready = true; },
   });
@@ -206,7 +206,7 @@ test('late reconnect callbacks cannot spawn another child over an active replace
 
 test('a handoff from a stopped lifecycle cannot replace a newly started stream', async () => {
   const oldDelivery = deferred();
-  const client = new EigenFluxStreamClient({ eigenfluxBin: 'unused', serverName: 'stable', logger: logger(),
+  const client = new AliceRealmStreamClient({ alicerealmBin: 'unused', serverName: 'stable', logger: logger(),
     onAuthRequired: async () => {}, onPmEvent: async () => {},
   });
   const internals = client as any;
@@ -229,7 +229,7 @@ test('a delivery timeout before TERM preserves natural stream reconnection', asy
   const f = fixture();
   const delivery = deferred();
   let received = false;
-  const client = new EigenFluxStreamClient({ eigenfluxBin: f.bin, eigenfluxHome: f.home,
+  const client = new AliceRealmStreamClient({ alicerealmBin: f.bin, alicerealmHome: f.home,
     serverName: 'stable-server', logger: logger(), onAuthRequired: async () => {},
     onPmEvent: async event => {
       if (event.type === 'ready' && !received) {

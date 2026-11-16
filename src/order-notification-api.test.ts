@@ -3,11 +3,11 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { createOrderNotificationRequest } from './order-notification-api';
 import { OrderNotifications } from './order-notifications';
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 import { Logger } from './logger';
 
-jest.mock('./cli-executor', () => ({ execEigenflux: jest.fn() }));
-const cli = jest.mocked(execEigenflux);
+jest.mock('./cli-executor', () => ({ execAliceRealm: jest.fn() }));
+const cli = jest.mocked(execAliceRealm);
 const notification = {
   notification_id: '358908387632611329', source_type: 'commission_order',
   payload: { order_id: '358906519414112256', to_state: 'in_progress' },
@@ -36,7 +36,7 @@ beforeEach(() => {
   });
   fetchMock = jest.spyOn(globalThis, 'fetch');
   request = createOrderNotificationRequest({
-    eigenfluxBin: '/configured/eigenflux', eigenfluxHome: home,
+    alicerealmBin: '/configured/alicerealm', alicerealmHome: home,
     serverName: 'production', endpoint: 'https://example.test/', agentID: '42', logger,
   });
 });
@@ -58,7 +58,7 @@ test('expired polling credentials recover through CLI and deliver a paid order e
   expect(deliver).toHaveBeenCalledTimes(1);
   expect(deliver).toHaveBeenCalledWith(notification, expect.any(Object), expect.any(Function));
   expect(cli).toHaveBeenCalledTimes(1);
-  expect(cli).toHaveBeenCalledWith('/configured/eigenflux', [
+  expect(cli).toHaveBeenCalledWith('/configured/alicerealm', [
     '--homedir', home, '--server', 'production', 'profile', 'show', '--format', 'json',
   ], expect.objectContaining({ logger }));
   expect(fetchMock.mock.calls.filter(([, o]) => o.method === 'POST')).toHaveLength(1);

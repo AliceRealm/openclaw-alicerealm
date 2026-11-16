@@ -1,6 +1,6 @@
 /**
  * The sole resident piece of feedback collection left in the plugin: a retry
- * cadence that drives `eigenflux feed event flush`. The CLI owns the queue,
+ * cadence that drives `alicerealm feed event flush`. The CLI owns the queue,
  * batching, and dedup; it flushes a batch and reports `{ flushed, remaining,
  * ok }` WITHOUT any back-off of its own. Deciding *when* to retry is the
  * caller's job — that back-off lives here.
@@ -15,7 +15,7 @@
  * 5min) so the retry behaviour is unchanged from the pre-downsink plugin.
  */
 
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 import { Logger } from './logger';
 
 export const DEFAULT_BASE_BACKOFF_MS = 5_000;
@@ -23,7 +23,7 @@ export const DEFAULT_MAX_BACKOFF_MS = 5 * 60_000;
 
 export interface FlushLoopConfig {
   serverName: string;
-  eigenfluxBin: string;
+  alicerealmBin: string;
   logger: Logger;
   baseBackoffMs?: number;
   maxBackoffMs?: number;
@@ -110,8 +110,8 @@ export class FeedbackFlushLoop {
     if (!this.running || this.inFlight) return;
     this.inFlight = true;
     try {
-      const result = await execEigenflux<FlushResult>(
-        this.config.eigenfluxBin,
+      const result = await execAliceRealm<FlushResult>(
+        this.config.alicerealmBin,
         ['feed', 'event', 'flush', '-s', this.config.serverName],
         { logger: this.config.logger }
       );

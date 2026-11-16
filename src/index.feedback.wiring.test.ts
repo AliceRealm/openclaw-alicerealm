@@ -1,6 +1,6 @@
 /**
  * Smoke test for the downsunk feedback wiring: the followup tool shells out to
- * `eigenflux feed event record`, and the resident flush loop drives `eigenflux
+ * `alicerealm feed event record`, and the resident flush loop drives `alicerealm
  * feed event flush`. Both delegate all queue/dedup logic to the CLI — this test
  * asserts the plugin builds the right argv and passes the CLI's JSON through,
  * without any in-plugin ledger/queue.
@@ -10,11 +10,11 @@ import { Logger } from './logger';
 import type { CliResult } from './cli-executor';
 
 jest.mock('./cli-executor');
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 import { handleFollowup, FollowupDeps, FollowupResult } from './feedback-tool';
 import { FeedbackFlushLoop } from './feedback-flush-loop';
 
-const execMock = execEigenflux as jest.MockedFunction<typeof execEigenflux>;
+const execMock = execAliceRealm as jest.MockedFunction<typeof execAliceRealm>;
 
 function createLogger(): Logger {
   return new Logger({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() });
@@ -32,7 +32,7 @@ describe('feedback collection wiring (downsunk to CLI)', () => {
 
   beforeEach(() => {
     execMock.mockReset();
-    deps = { eigenfluxBin: 'eigenflux', serverName: 'srv', logger: createLogger() };
+    deps = { alicerealmBin: 'alicerealm', serverName: 'srv', logger: createLogger() };
   });
 
   test('batch surface then single follow-up each shell out to `feed event record`', async () => {
@@ -93,7 +93,7 @@ describe('feedback collection wiring (downsunk to CLI)', () => {
 
   test('flush loop drives `feed event flush` for the server on start', async () => {
     execMock.mockResolvedValue({ kind: 'success', data: { flushed: 4, remaining: 0, ok: true } } as CliResult<unknown>);
-    const loop = new FeedbackFlushLoop({ serverName: 'srv', eigenfluxBin: 'eigenflux', logger: createLogger() });
+    const loop = new FeedbackFlushLoop({ serverName: 'srv', alicerealmBin: 'alicerealm', logger: createLogger() });
 
     loop.start();
     await flushMicrotasks();
@@ -101,7 +101,7 @@ describe('feedback collection wiring (downsunk to CLI)', () => {
 
     expect(execMock).toHaveBeenCalledTimes(1);
     const [bin, args] = execMock.mock.calls[0];
-    expect(bin).toBe('eigenflux');
+    expect(bin).toBe('alicerealm');
     expect(args).toEqual(['feed', 'event', 'flush', '-s', 'srv']);
   });
 });

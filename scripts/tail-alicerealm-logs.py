@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Tail OpenClaw daily log files and print EigenFlux log messages.
+"""Tail OpenClaw daily log files and print AliceRealm log messages.
 
 Watches /tmp/openclaw/openclaw-YYYY-MM-DD.log, automatically rotating to
 the newest file when a new day's log appears. For each line, parses the
-JSON envelope, filters entries whose "0" field mentions "eigenflux", and
+JSON envelope, filters entries whose "0" field mentions "alicerealm", and
 prints the "1" field.
 """
 
@@ -46,7 +46,7 @@ def process_line(line: str) -> None:
         return
 
     tag = record.get("0")
-    if not isinstance(tag, str) or "eigenflux" not in tag.lower():
+    if not isinstance(tag, str) or "alicerealm" not in tag.lower():
         return
 
     message = record.get("1")

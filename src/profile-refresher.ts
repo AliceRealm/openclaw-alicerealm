@@ -1,18 +1,18 @@
 /** OpenClaw context and delivery adapter for the CLI-owned profile refresh task. */
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 import { Logger } from './logger';
 import { EMPTY_CONTEXT, type RefreshContext } from './openclaw-context';
 
 export interface ProfileRefresherConfig {
   serverName: string;
-  eigenfluxBin: string;
+  alicerealmBin: string;
   logger: Logger;
   collectContext?: () => RefreshContext | Promise<RefreshContext>;
   onRefreshPrompt: (prompt: string) => Promise<void>;
   onAuthRequired: (stderr?: string) => Promise<void>;
 }
 
-export class EigenFluxProfileRefresher {
+export class AliceRealmProfileRefresher {
   private running = false;
   private inFlight: Promise<void> | null = null;
   private manualInFlight = false;
@@ -70,7 +70,7 @@ export class EigenFluxProfileRefresher {
     }
     if (!manual && !this.running) return;
 
-    const result = await execEigenflux<string>(this.config.eigenfluxBin, [
+    const result = await execAliceRealm<string>(this.config.alicerealmBin, [
       'profile', 'refresh-task', '-s', this.config.serverName, '--format', 'agent',
       ...(manual ? ['--force'] : []),
       ...(context.memoryDirs ?? []).flatMap((dir) => ['--memory-dir', dir]),

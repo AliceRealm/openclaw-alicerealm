@@ -1,6 +1,6 @@
 import type { OpenClawPluginApi } from 'openclaw/plugin-sdk';
 import { AuthNotificationGate } from './auth-notification-gate';
-import { EigenFluxNotifier } from './notifier';
+import { AliceRealmNotifier } from './notifier';
 import { Logger } from './logger';
 import { sendAuthReminder } from './auth-reminder-transport';
 import { resolveNotificationRoute } from './notification-route-resolver';
@@ -33,7 +33,7 @@ function setup(tasks?: unknown) {
   };
   const subagent = { run: jest.fn(), waitForRun: jest.fn().mockResolvedValue({ status: 'ok' }) };
   const logs = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
-  const notifier = new EigenFluxNotifier({ config: {}, runtime: { subagent, system, tasks } } as unknown as OpenClawPluginApi,
+  const notifier = new AliceRealmNotifier({ config: {}, runtime: { subagent, system, tasks } } as unknown as OpenClawPluginApi,
     new Logger(logs), { sessionKey: 'main', agentId: 'main', openclawCliBin: 'openclaw' });
   const gate = new AuthNotificationGate();
   const notify = (message = 'AUTH_REQUIRED') => gate.deliver(() => notifier.deliver(message, { requireCompletion: true }));
@@ -54,7 +54,7 @@ test('only the final matching channel-send result starts cooldown', async () => 
   await expect(context.notify()).resolves.toBe(false);
   expect(send).toHaveBeenCalledTimes(1);
   expect(send).toHaveBeenCalledWith({ sessionKey: 'main', message: 'AUTH_REQUIRED',
-    deliver: true, lane: 'eigenflux-bg', idempotencyKey: expect.any(String) }, 480_000);
+    deliver: true, lane: 'alicerealm-bg', idempotencyKey: expect.any(String) }, 480_000);
   noOtherTransport(context);
 });
 
@@ -148,7 +148,7 @@ test('route persistence failure does not discard a confirmed channel send', asyn
   await expect(context.notify()).resolves.toBe(false);
   expect(writeRoute).toHaveBeenCalledTimes(1);
   expect(send).toHaveBeenCalledWith({ sessionKey: 'agent:main:feishu:direct:ou_123',
-    message: 'AUTH_REQUIRED', deliver: true, lane: 'eigenflux-bg', idempotencyKey: expect.any(String) }, 480_000);
+    message: 'AUTH_REQUIRED', deliver: true, lane: 'alicerealm-bg', idempotencyKey: expect.any(String) }, 480_000);
 });
 
 test.each(['missing API', 'missing record', 'succeeded', 'failed', 'query failure'])(

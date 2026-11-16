@@ -1,12 +1,12 @@
-import { EigenFluxSettingsReporter, resolveAgentMode } from './settings-reporter';
+import { AliceRealmSettingsReporter, resolveAgentMode } from './settings-reporter';
 import { Logger } from './logger';
 import type { CliResult } from './cli-executor';
 
 jest.mock('./cli-executor');
 
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 
-const execMock = execEigenflux as jest.MockedFunction<typeof execEigenflux>;
+const execMock = execAliceRealm as jest.MockedFunction<typeof execAliceRealm>;
 
 function createLoggerSpies() {
   return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
@@ -18,34 +18,34 @@ function createLogger(spies = createLoggerSpies()): Logger {
 
 describe('resolveAgentMode', () => {
   test('ignores a stale skill channel for the native plugin loop', () => {
-    expect(resolveAgentMode({ EIGENFLUX_CHANNEL: 'skill' })).toBe('plugin');
+    expect(resolveAgentMode({ ALICEREALM_CHANNEL: 'skill' })).toBe('plugin');
   });
 
-  test('maps explicit EIGENFLUX_CHANNEL=plugin to plugin', () => {
-    expect(resolveAgentMode({ EIGENFLUX_CHANNEL: 'plugin' })).toBe('plugin');
+  test('maps explicit ALICEREALM_CHANNEL=plugin to plugin', () => {
+    expect(resolveAgentMode({ ALICEREALM_CHANNEL: 'plugin' })).toBe('plugin');
   });
 
   test('maps openclaw host signal to plugin', () => {
-    expect(resolveAgentMode({ EIGENFLUX_HOST: 'openclaw/0.0.14' })).toBe('plugin');
+    expect(resolveAgentMode({ ALICEREALM_HOST: 'openclaw/0.0.14' })).toBe('plugin');
   });
 
   test('maps openclaw channel to plugin', () => {
-    expect(resolveAgentMode({ EIGENFLUX_CHANNEL: 'openclaw' })).toBe('plugin');
+    expect(resolveAgentMode({ ALICEREALM_CHANNEL: 'openclaw' })).toBe('plugin');
   });
 
   test('routing channels do not override the actual loop owner', () => {
     expect(
-      resolveAgentMode({ EIGENFLUX_CHANNEL: 'skill', EIGENFLUX_HOST: 'openclaw/1.0' })
+      resolveAgentMode({ ALICEREALM_CHANNEL: 'skill', ALICEREALM_HOST: 'openclaw/1.0' })
     ).toBe('plugin');
   });
 
   test('the polling service reports plugin without environment hints', () => {
     expect(resolveAgentMode({})).toBe('plugin');
-    expect(resolveAgentMode({ EIGENFLUX_CHANNEL: 'discord' })).toBe('plugin');
+    expect(resolveAgentMode({ ALICEREALM_CHANNEL: 'discord' })).toBe('plugin');
   });
 });
 
-describe('EigenFluxSettingsReporter', () => {
+describe('AliceRealmSettingsReporter', () => {
   beforeEach(() => {
     execMock.mockReset();
   });
@@ -57,8 +57,8 @@ describe('EigenFluxSettingsReporter', () => {
   ])('reports the CLI result without inventing a network write: %s', async (output, status) => {
     const spies = createLoggerSpies();
     execMock.mockResolvedValue({ kind: 'success', data: output });
-    const reporter = new EigenFluxSettingsReporter({
-      serverName: 'srv', eigenfluxBin: 'eigenflux', logger: createLogger(spies),
+    const reporter = new AliceRealmSettingsReporter({
+      serverName: 'srv', alicerealmBin: 'alicerealm', logger: createLogger(spies),
     });
     expect(await reporter.report()).toBe(true);
     expect(spies.info).toHaveBeenCalledWith(expect.stringContaining(`Agent settings ${status}`));
@@ -67,9 +67,9 @@ describe('EigenFluxSettingsReporter', () => {
   test('invokes `settings push --mode <mode>` once on a successful poll', async () => {
     execMock.mockResolvedValue({ kind: 'success', data: '' } as CliResult<any>);
 
-    const reporter = new EigenFluxSettingsReporter({
+    const reporter = new AliceRealmSettingsReporter({
       serverName: 'srv',
-      eigenfluxBin: '/usr/bin/eigenflux',
+      alicerealmBin: '/usr/bin/alicerealm',
       logger: createLogger(),
       resolveMode: () => 'plugin',
     });
@@ -79,7 +79,7 @@ describe('EigenFluxSettingsReporter', () => {
     expect(ok).toBe(true);
     expect(execMock).toHaveBeenCalledTimes(1);
     expect(execMock).toHaveBeenCalledWith(
-      '/usr/bin/eigenflux',
+      '/usr/bin/alicerealm',
       ['settings', 'push', '--mode', 'plugin', '-s', 'srv'],
       expect.objectContaining({ parseJson: false })
     );
@@ -88,16 +88,16 @@ describe('EigenFluxSettingsReporter', () => {
   test('passes through skill mode', async () => {
     execMock.mockResolvedValue({ kind: 'success', data: '' } as CliResult<any>);
 
-    const reporter = new EigenFluxSettingsReporter({
+    const reporter = new AliceRealmSettingsReporter({
       serverName: 'srv',
-      eigenfluxBin: 'eigenflux',
+      alicerealmBin: 'alicerealm',
       logger: createLogger(),
       resolveMode: () => 'skill',
     });
 
     await reporter.report();
     expect(execMock).toHaveBeenCalledWith(
-      'eigenflux',
+      'alicerealm',
       ['settings', 'push', '--mode', 'skill', '-s', 'srv'],
       expect.any(Object)
     );
@@ -106,9 +106,9 @@ describe('EigenFluxSettingsReporter', () => {
   test('omits --mode when mode cannot be determined', async () => {
     execMock.mockResolvedValue({ kind: 'success', data: '' } as CliResult<any>);
 
-    const reporter = new EigenFluxSettingsReporter({
+    const reporter = new AliceRealmSettingsReporter({
       serverName: 'srv',
-      eigenfluxBin: 'eigenflux',
+      alicerealmBin: 'alicerealm',
       logger: createLogger(),
       resolveMode: () => undefined,
     });
@@ -117,7 +117,7 @@ describe('EigenFluxSettingsReporter', () => {
 
     expect(ok).toBe(true);
     expect(execMock).toHaveBeenCalledWith(
-      'eigenflux',
+      'alicerealm',
       ['settings', 'push', '-s', 'srv'],
       expect.any(Object)
     );
@@ -125,19 +125,19 @@ describe('EigenFluxSettingsReporter', () => {
 
   test('default resolveMode uses env (openclaw host -> plugin)', async () => {
     const prev = { ...process.env };
-    process.env.EIGENFLUX_HOST = 'openclaw/0.0.14';
-    delete process.env.EIGENFLUX_CHANNEL;
+    process.env.ALICEREALM_HOST = 'openclaw/0.0.14';
+    delete process.env.ALICEREALM_CHANNEL;
     execMock.mockResolvedValue({ kind: 'success', data: '' } as CliResult<any>);
 
     try {
-      const reporter = new EigenFluxSettingsReporter({
+      const reporter = new AliceRealmSettingsReporter({
         serverName: 'srv',
-        eigenfluxBin: 'eigenflux',
+        alicerealmBin: 'alicerealm',
         logger: createLogger(),
       });
       await reporter.report();
       expect(execMock).toHaveBeenCalledWith(
-        'eigenflux',
+        'alicerealm',
         ['settings', 'push', '--mode', 'plugin', '-s', 'srv'],
         expect.any(Object)
       );
@@ -155,9 +155,9 @@ describe('EigenFluxSettingsReporter', () => {
       stderr: 'boom',
     } as CliResult<any>);
 
-    const reporter = new EigenFluxSettingsReporter({
+    const reporter = new AliceRealmSettingsReporter({
       serverName: 'srv',
-      eigenfluxBin: 'eigenflux',
+      alicerealmBin: 'alicerealm',
       logger: createLogger(spies),
       resolveMode: () => 'plugin',
     });
@@ -171,9 +171,9 @@ describe('EigenFluxSettingsReporter', () => {
     const spies = createLoggerSpies();
     execMock.mockResolvedValue({ kind: 'auth_required', stderr: '' } as CliResult<any>);
 
-    const reporter = new EigenFluxSettingsReporter({
+    const reporter = new AliceRealmSettingsReporter({
       serverName: 'srv',
-      eigenfluxBin: 'eigenflux',
+      alicerealmBin: 'alicerealm',
       logger: createLogger(spies),
       resolveMode: () => 'plugin',
     });
@@ -184,11 +184,11 @@ describe('EigenFluxSettingsReporter', () => {
 
   test('does not throw when CLI is not installed', async () => {
     const spies = createLoggerSpies();
-    execMock.mockResolvedValue({ kind: 'not_installed', bin: 'eigenflux' } as CliResult<any>);
+    execMock.mockResolvedValue({ kind: 'not_installed', bin: 'alicerealm' } as CliResult<any>);
 
-    const reporter = new EigenFluxSettingsReporter({
+    const reporter = new AliceRealmSettingsReporter({
       serverName: 'srv',
-      eigenfluxBin: 'eigenflux',
+      alicerealmBin: 'alicerealm',
       logger: createLogger(spies),
       resolveMode: () => 'plugin',
     });
@@ -201,9 +201,9 @@ describe('EigenFluxSettingsReporter', () => {
     const spies = createLoggerSpies();
     execMock.mockRejectedValue(new Error('spawn failure'));
 
-    const reporter = new EigenFluxSettingsReporter({
+    const reporter = new AliceRealmSettingsReporter({
       serverName: 'srv',
-      eigenfluxBin: 'eigenflux',
+      alicerealmBin: 'alicerealm',
       logger: createLogger(spies),
       resolveMode: () => 'plugin',
     });
@@ -221,9 +221,9 @@ describe('EigenFluxSettingsReporter', () => {
         })
     );
 
-    const reporter = new EigenFluxSettingsReporter({
+    const reporter = new AliceRealmSettingsReporter({
       serverName: 'srv',
-      eigenfluxBin: 'eigenflux',
+      alicerealmBin: 'alicerealm',
       logger: createLogger(),
       resolveMode: () => 'plugin',
     });

@@ -31,7 +31,7 @@ describe('FeedPushScheduler', () => {
       isBusy,
       pushNow,
       logger: createLogger(),
-      serverName: 'eigenflux',
+      serverName: 'alicerealm',
       recheckMs: overrides.recheckMs ?? 30_000,
       budgetMs: overrides.budgetMs ?? 600_000,
     });

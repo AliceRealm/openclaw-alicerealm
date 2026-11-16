@@ -54,7 +54,7 @@ export type NotificationRouteConfig = {
   replyAccountId?: string;
   sessionStorePath?: string;
   store?: PluginRuntimeStore;
-  eigenfluxBin?: string;
+  alicerealmBin?: string;
   serverName?: string;
   routeOverrides?: NotificationRouteOverrides;
 };
@@ -657,7 +657,7 @@ function selectBestRoute(
 
 /**
  * Find a session route that matches the given binding (channel + to + optional
- * account). Used by `/eigenflux here` to pin delivery to the current conversation.
+ * account). Used by `/alicerealm here` to pin delivery to the current conversation.
  * Falls back through the same external-first / direct-first tiers as startup
  * discovery.
  */
@@ -686,7 +686,7 @@ export function findSessionRouteForBinding(
   }
 
   // Fallback: synthesize a sessionKey from agentId + channel + peer shape + target
-  // so `/eigenflux here` can pin the conversation even without a session-store hit.
+  // so `/alicerealm here` can pin the conversation even without a session-store hit.
   const peerShape = inferPeerShape(channel, to);
   const targetLocal = stripTargetPrefix(to);
   if (!peerShape || !targetLocal) {

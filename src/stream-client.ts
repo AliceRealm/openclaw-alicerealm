@@ -1,6 +1,6 @@
 /**
- * Stream client for EigenFlux private message updates.
- * Manages a long-running `eigenflux stream` child process that outputs NDJSON.
+ * Stream client for AliceRealm private message updates.
+ * Manages a long-running `alicerealm stream` child process that outputs NDJSON.
  */
 
 import { spawn, ChildProcess } from 'child_process';
@@ -56,15 +56,15 @@ export interface PmStreamEvent {
 
 export interface StreamClientConfig {
   serverName: string;
-  eigenfluxBin: string;
-  eigenfluxHome?: string;
+  alicerealmBin: string;
+  alicerealmHome?: string;
   logger: Logger;
   onPmEvent: (event: PmStreamEvent) => Promise<void>;
   onAuthRequired: (stderr?: string) => Promise<void>;
   onStreamError?: (error: Error) => void;
 }
 
-export class EigenFluxStreamClient {
+export class AliceRealmStreamClient {
   private config: StreamClientConfig;
   private child: ChildProcess | null = null;
   private readline: ReadlineInterface | null = null;
@@ -213,18 +213,18 @@ export class EigenFluxStreamClient {
     const generation = this.generation;
 
     const args = ['stream', '-s', this.config.serverName, '-f', 'json'];
-    if (this.config.eigenfluxHome) args.push('--homedir', this.config.eigenfluxHome);
+    if (this.config.alicerealmHome) args.push('--homedir', this.config.alicerealmHome);
     if (this.lastCursor) {
       args.push('--cursor', this.lastCursor);
     }
 
     this.config.logger.info(
-      `Spawning: ${this.config.eigenfluxBin} ${args.join(' ')}`
+      `Spawning: ${this.config.alicerealmBin} ${args.join(' ')}`
     );
 
-    const child = spawn(this.config.eigenfluxBin, args, {
+    const child = spawn(this.config.alicerealmBin, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: cliEnvironment(this.config.eigenfluxHome ? { EIGENFLUX_HOME: this.config.eigenfluxHome } : undefined),
+      env: cliEnvironment(this.config.alicerealmHome ? { ALICEREALM_HOME: this.config.alicerealmHome } : undefined),
     });
     this.child = child;
     this.childClosed = new Promise(resolve => { child.once('close', () => resolve()); });

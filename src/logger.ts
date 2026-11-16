@@ -1,7 +1,7 @@
 import type { PluginLogger } from 'openclaw/plugin-sdk/plugin-entry';
 
 /**
- * Logger wrapper that prefixes all messages with [EigenFlux].
+ * Logger wrapper that prefixes all messages with [AliceRealm].
  */
 export class Logger {
   private baseLogger: PluginLogger;
@@ -11,21 +11,21 @@ export class Logger {
   }
 
   info(message: string, ...args: unknown[]): void {
-    const formatted = args.length ? `[EigenFlux] ${message} ${args.map(String).join(' ')}` : `[EigenFlux] ${message}`;
+    const formatted = args.length ? `[AliceRealm] ${message} ${args.map(String).join(' ')}` : `[AliceRealm] ${message}`;
     this.baseLogger.info(formatted);
   }
 
   warn(message: string, ...args: unknown[]): void {
-    const formatted = args.length ? `[EigenFlux] ${message} ${args.map(String).join(' ')}` : `[EigenFlux] ${message}`;
+    const formatted = args.length ? `[AliceRealm] ${message} ${args.map(String).join(' ')}` : `[AliceRealm] ${message}`;
     this.baseLogger.warn(formatted);
   }
 
   error(message: string, ...args: unknown[]): void {
-    const formatted = args.length ? `[EigenFlux] ${message} ${args.map(String).join(' ')}` : `[EigenFlux] ${message}`;
+    const formatted = args.length ? `[AliceRealm] ${message} ${args.map(String).join(' ')}` : `[AliceRealm] ${message}`;
     this.baseLogger.error(formatted);
   }
 
   debug(message: string, ...args: unknown[]): void {
-    (this.baseLogger as any).debug?.(`[EigenFlux] ${message}`, ...args);
+    (this.baseLogger as any).debug?.(`[AliceRealm] ${message}`, ...args);
   }
 }

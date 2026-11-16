@@ -1,7 +1,7 @@
 /**
- * Process-wide backpressure for EigenFlux-triggered agent runs.
+ * Process-wide backpressure for AliceRealm-triggered agent runs.
  *
- * A key is a serialization boundary (for example one EigenFlux conv_id).
+ * A key is a serialization boundary (for example one AliceRealm conv_id).
  * Different keys may run concurrently, but the process-wide limit keeps the
  * model relay from being flooded by feed, PM, and profile work at once.
  */
@@ -63,11 +63,11 @@ export class KeyedDeliveryCoordinator {
 }
 
 function resolveMaxBackgroundConcurrency(): number {
-  const parsed = Number.parseInt(process.env.EIGENFLUX_MAX_BACKGROUND_CONCURRENCY ?? '', 10);
+  const parsed = Number.parseInt(process.env.ALICEREALM_MAX_BACKGROUND_CONCURRENCY ?? '', 10);
   if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 4) {
     return parsed;
   }
-  // One EigenFlux background run leaves relay capacity for the user's
+  // One AliceRealm background run leaves relay capacity for the user's
   // interactive turn. Operators with a larger provider quota can raise it.
   return 1;
 }

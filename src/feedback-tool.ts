@@ -1,15 +1,15 @@
 /**
- * Thin shell for the eigenflux__followup tool. All validation, item_id
+ * Thin shell for the alicerealm__followup tool. All validation, item_id
  * verification, impression/server enrichment, dedup_key computation, queueing
- * and opportunistic flushing now live in the CLI (`eigenflux feed event
+ * and opportunistic flushing now live in the CLI (`alicerealm feed event
  * record`). This module only parses the tool params into CLI args, shells out
- * via execEigenflux, and hands the CLI's JSON result straight back to the
+ * via execAliceRealm, and hands the CLI's JSON result straight back to the
  * agent. The OpenClaw tool object is registered in index.ts and delegates here
  * so the arg-building stays unit-testable independent of the plugin runtime.
  */
 
 import { Logger } from './logger';
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 
 export type FeedbackEventKind = 'surface' | 'question' | 'discussion' | 'task';
 
@@ -77,13 +77,13 @@ function collectItemIds(raw: FollowupInput): string[] {
 }
 
 export interface FollowupDeps {
-  eigenfluxBin: string;
+  alicerealmBin: string;
   serverName: string;
   logger: Logger;
 }
 
 /**
- * Build the CLI args and shell out to `eigenflux feed event record`. Returns the
+ * Build the CLI args and shell out to `alicerealm feed event record`. Returns the
  * CLI's parsed JSON `{ ok, accepted, results }`. Verification, enrichment and
  * dedup all happen inside the CLI — the CLI returns an error for illegal
  * params, which we surface as `invalid_params`.
@@ -106,7 +106,7 @@ export async function handleFollowup(deps: FollowupDeps, raw: FollowupInput): Pr
     args.push('--brief', raw.brief.slice(0, 200));
   }
 
-  const result = await execEigenflux<FollowupResult>(deps.eigenfluxBin, args, {
+  const result = await execAliceRealm<FollowupResult>(deps.alicerealmBin, args, {
     logger: deps.logger,
   });
 

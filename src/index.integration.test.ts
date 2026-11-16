@@ -20,7 +20,7 @@ jest.mock('openclaw/plugin-sdk/plugin-entry', () => ({
   buildJsonPluginConfigSchema: (schema: any) => schema,
 }));
 
-const pluginConfig = { serverRouting: { eigenflux: { replyChannel: 'feishu', replyTo: 'user:integration' } } };
+const pluginConfig = { serverRouting: { alicerealm: { replyChannel: 'feishu', replyTo: 'user:integration' } } };
 const sessionEntries = new Map<string, any>();
 jest.mock('openclaw/plugin-sdk/session-store-runtime', () => ({
   updateLastRoute: jest.fn(async ({ sessionKey, storePath, route, ...context }: any) => {
@@ -29,27 +29,27 @@ jest.mock('openclaw/plugin-sdk/session-store-runtime', () => ({
   deliveryContextFromSession: (entry: any) => entry?.delivery?.context,
 }));
 const sessionStore = {
-  resolveStorePath: () => '/tmp/eigenflux-integration-sessions.json',
+  resolveStorePath: () => '/tmp/alicerealm-integration-sessions.json',
   getSessionEntry: ({ sessionKey }: any) => sessionEntries.get(sessionKey),
 };
 
-// Mock discoverServers and resolveEigenfluxHome
+// Mock discoverServers and resolveAliceRealmHome
 const discoverServersMock = jest.fn();
-const resolveEigenfluxHomeMock = jest.fn();
+const resolveAliceRealmHomeMock = jest.fn();
 
 jest.mock('./config', () => {
   const actual = jest.requireActual('./config');
   return {
     ...actual,
     discoverServers: (...args: any[]) => discoverServersMock(...args),
-    resolveEigenfluxHome: () => resolveEigenfluxHomeMock(),
+    resolveAliceRealmHome: () => resolveAliceRealmHomeMock(),
   };
 });
 
-// Mock execEigenflux for CLI calls
-const execEigenfluxMock = jest.fn();
+// Mock execAliceRealm for CLI calls
+const execAliceRealmMock = jest.fn();
 jest.mock('./cli-executor', () => ({
-  execEigenflux: (...args: any[]) => execEigenfluxMock(...args),
+  execAliceRealm: (...args: any[]) => execAliceRealmMock(...args),
 }));
 
 const sendAuthReminderMock = jest.fn();
@@ -57,7 +57,7 @@ jest.mock('./auth-reminder-transport', () => ({
   sendAuthReminder: (...args: any[]) => sendAuthReminderMock(...args),
 }));
 
-// Mock EigenFluxStreamClient
+// Mock AliceRealmStreamClient
 const streamClientAdoptMock = jest.fn().mockResolvedValue(undefined);
 const streamClientStartMock = jest.fn().mockResolvedValue(undefined);
 const streamClientStopMock = jest.fn().mockResolvedValue(undefined);
@@ -66,7 +66,7 @@ const streamClientGetLastCursorMock = jest.fn().mockReturnValue(null);
 let streamClientConfig: any;
 
 jest.mock('./stream-client', () => ({
-  EigenFluxStreamClient: jest.fn().mockImplementation((config: any) => {
+  AliceRealmStreamClient: jest.fn().mockImplementation((config: any) => {
     streamClientConfig = config;
     return {
       start: streamClientStartMock,
@@ -97,7 +97,7 @@ function waitFor(condition: () => boolean, timeoutMs = 8000): Promise<void> {
 
 describe('register integration', () => {
   let homeDir: string;
-  let eigenfluxHome: string;
+  let alicerealmHome: string;
   let wakeOnEmpty: boolean;
   let profileTask: string;
 
@@ -113,13 +113,13 @@ describe('register integration', () => {
     streamClientConfig = undefined;
     wakeOnEmpty = true;
     profileTask = '';
-    homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eigenflux-openclaw-home-'));
-    eigenfluxHome = path.join(homeDir, '.eigenflux');
+    homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alicerealm-openclaw-home-'));
+    alicerealmHome = path.join(homeDir, '.alicerealm');
     __testHomeDir = homeDir;
-    resolveEigenfluxHomeMock.mockReturnValue(eigenfluxHome);
+    resolveAliceRealmHomeMock.mockReturnValue(alicerealmHome);
 
     // Create server credentials
-    const serverDir = path.join(eigenfluxHome, 'servers', 'eigenflux');
+    const serverDir = path.join(alicerealmHome, 'servers', 'alicerealm');
     fs.mkdirSync(serverDir, { recursive: true });
     fs.writeFileSync(
       path.join(serverDir, 'credentials.json'),
@@ -136,10 +136,10 @@ describe('register integration', () => {
       },
     ];
 
-    // Set up execEigenflux to return feed data
-    execEigenfluxMock.mockImplementation(async (bin: string, args: string[]) => {
+    // Set up execAliceRealm to return feed data
+    execAliceRealmMock.mockImplementation(async (bin: string, args: string[]) => {
       if (args[0] === '--homedir' && args[4] === 'heartbeat' && args[5] === 'plan') {
-        return { kind: 'success', data: { schema_version: 'eigenflux_heartbeat_plan.v1', cli_version: '0.6.7', agent_prompt: 'EIGENFLUX HEARTBEAT PLAN\nCommands → Feed → Attention', wake_on_empty: wakeOnEmpty } };
+        return { kind: 'success', data: { schema_version: 'eigenflux_heartbeat_plan.v1', cli_version: '0.6.7', agent_prompt: 'ALICEREALM HEARTBEAT PLAN\nCommands → Feed → Attention', wake_on_empty: wakeOnEmpty } };
       }
       if (args[0] === 'feed' && args[1] === 'poll') {
         return {
@@ -148,7 +148,7 @@ describe('register integration', () => {
             items: feedItems,
             has_more: false,
             notifications: [],
-            output_contract: 'OUTPUT CONTRACT supplied by CLI: follow the current Skills. 📡 Powered by EigenFlux',
+            output_contract: 'OUTPUT CONTRACT supplied by CLI: follow the current Skills. 📡 Powered by AliceRealm',
           },
         };
       }
@@ -162,24 +162,24 @@ describe('register integration', () => {
     });
 
     discoverServersMock.mockResolvedValue({ kind: 'ok', servers: [
-      { name: 'eigenflux', endpoint: 'http://127.0.0.1:18080', current: true },
+      { name: 'alicerealm', endpoint: 'http://127.0.0.1:18080', current: true },
     ] });
 
     // Keep explicit oneshot compatibility covered alongside the default path.
-    process.env.EIGENFLUX_FEED_DELIVERY = 'oneshot';
+    process.env.ALICEREALM_FEED_DELIVERY = 'oneshot';
   });
 
   afterEach(async () => {
     __testHomeDir = undefined;
-    delete process.env.EIGENFLUX_FEED_DELIVERY;
+    delete process.env.ALICEREALM_FEED_DELIVERY;
     fs.rmSync(homeDir, { recursive: true, force: true });
   });
 
   test('service starts while the first poll waits for Gateway auth reminder delivery', async () => {
     jest.resetModules();
     const { default: plugin } = await import('./index');
-    const cli = execEigenfluxMock.getMockImplementation()!;
-    execEigenfluxMock.mockImplementation((bin: string, args: string[]) =>
+    const cli = execAliceRealmMock.getMockImplementation()!;
+    execAliceRealmMock.mockImplementation((bin: string, args: string[]) =>
       args.includes('heartbeat') && args.includes('plan')
         ? Promise.resolve({ kind: 'auth_required', stderr: 'credentials expired' })
         : cli(bin, args)
@@ -201,7 +201,7 @@ describe('register integration', () => {
       ])).toBe(true);
       expect(streamClientStartMock).toHaveBeenCalledTimes(1);
       expect(sendAuthReminderMock).toHaveBeenCalledWith(
-        expect.objectContaining({ message: expect.stringContaining('[EIGENFLUX_AUTH_REQUIRED]') }),
+        expect.objectContaining({ message: expect.stringContaining('[ALICEREALM_AUTH_REQUIRED]') }),
         480_000
       );
     } finally {
@@ -225,16 +225,16 @@ describe('register integration', () => {
       registerService: (service: any) => services.push(service),
     } as any);
     await services[0].start();
-    await waitFor(() => execEigenfluxMock.mock.calls.some(([, args]) => args[0] === 'profile' && args[1] === 'refresh-task'));
+    await waitFor(() => execAliceRealmMock.mock.calls.some(([, args]) => args[0] === 'profile' && args[1] === 'refresh-task'));
     expect(subagentRun).toHaveBeenCalledTimes(wake ? 1 : 0);
-    expect(execEigenfluxMock.mock.calls.some(([, args]) => args[0] === 'profile' && args[1] === 'refresh-task')).toBe(true);
+    expect(execAliceRealmMock.mock.calls.some(([, args]) => args[0] === 'profile' && args[1] === 'refresh-task')).toBe(true);
     await services[0].stop();
   });
 
   test('central profile tasks keep the host reply route available for Skill-selected drafts', async () => {
     wakeOnEmpty = false;
     feedItems = [];
-    profileTask = 'EIGENFLUX PROFILE REVIEW TASK\nFollow the current Skills.';
+    profileTask = 'ALICEREALM PROFILE REVIEW TASK\nFollow the current Skills.';
     jest.resetModules();
     const { default: plugin } = await import('./index');
     const services: any[] = [];
@@ -279,35 +279,35 @@ describe('register integration', () => {
     await waitFor(() => subagentRun.mock.calls.length === 1);
 
     expect(subagentRun).toHaveBeenCalledWith({
-      sessionKey: expect.stringMatching(/^eigenflux:feed:eigenflux:\d+-[a-f0-9]{8}$/),
-      message: expect.stringContaining('[EIGENFLUX_HEARTBEAT]'),
+      sessionKey: expect.stringMatching(/^alicerealm:feed:alicerealm:\d+-[a-f0-9]{8}$/),
+      message: expect.stringContaining('[ALICEREALM_HEARTBEAT]'),
       deliver: true,
       idempotencyKey: expect.any(String),
       lane: 'subagent',
     });
     expect(streamClientAdoptMock).toHaveBeenCalledWith('0.6.7');
-    expect(streamClientConfig.eigenfluxHome).toBe(eigenfluxHome);
+    expect(streamClientConfig.alicerealmHome).toBe(alicerealmHome);
     const message = String(subagentRun.mock.calls[0]?.[0]?.message);
     expect(message).toContain('Commands → Feed → Attention');
     expect(message).toContain('"item_id": "501"');
     expect(message).toContain('"group_id": "group-int-1"');
-    expect(message).toContain('server=eigenflux');
-    expect(message).toContain(`homedir=${eigenfluxHome}`);
-    expect(message).toContain('ef-broadcast skill');
+    expect(message).toContain('server=alicerealm');
+    expect(message).toContain(`homedir=${alicerealmHome}`);
+    expect(message).toContain('ar-broadcast skill');
     // The output contract must ride along the real delivery path, ahead of the payload.
     expect(message).toContain('OUTPUT CONTRACT');
-    expect(message).toContain('📡 Powered by EigenFlux');
+    expect(message).toContain('📡 Powered by AliceRealm');
 
     await services[0].stop();
   });
 
   test('default Feed uses an isolated session and does not submit work against the user main session', async () => {
-    delete process.env.EIGENFLUX_FEED_DELIVERY;
+    delete process.env.ALICEREALM_FEED_DELIVERY;
     jest.resetModules();
     const { default: plugin } = await import('./index');
     const services: any[] = [];
     const subagentRun = jest.fn(async (params: { sessionKey: string; deliver: boolean; lane: string; message: string }) => {
-      if (!params.sessionKey.startsWith('agent:main:eigenflux:feed:eigenflux:')) {
+      if (!params.sessionKey.startsWith('agent:main:alicerealm:feed:alicerealm:')) {
         throw new Error('Session "agent:main:main" changed while starting work. Retry. | SESSION_WORK_START_CHANGED');
       }
       return { runId: 'run-isolated-feed' };
@@ -349,8 +349,8 @@ describe('register integration', () => {
     const params = subagentRun.mock.calls[0][0];
     expect(params.deliver).toBe(true);
     expect(params.lane).toBe('subagent');
-    expect(params.sessionKey).toMatch(/^agent:main:eigenflux:feed:eigenflux:\d+-[a-f0-9]{8}$/);
-    expect(String(params.message)).toContain('[EIGENFLUX_FEED_PAYLOAD]');
+    expect(params.sessionKey).toMatch(/^agent:main:alicerealm:feed:alicerealm:\d+-[a-f0-9]{8}$/);
+    expect(String(params.message)).toContain('[ALICEREALM_FEED_PAYLOAD]');
     expect(enqueueSystemEvent).not.toHaveBeenCalled();
     expect(patchSessionEntry).not.toHaveBeenCalled();
     expect(sessionEntries.get(params.sessionKey)).toMatchObject({ delivery: {
@@ -367,7 +367,7 @@ describe('register integration', () => {
     { version: undefined, sessionAPIs: true },
     { version: '2026.9.4', sessionAPIs: false },
   ])('default Feed keeps the original external session for host $version with sessionAPIs=$sessionAPIs', async ({ version, sessionAPIs }) => {
-    delete process.env.EIGENFLUX_FEED_DELIVERY;
+    delete process.env.ALICEREALM_FEED_DELIVERY;
     jest.resetModules();
     const { default: plugin } = await import('./index');
     const services: any[] = [];
@@ -375,7 +375,7 @@ describe('register integration', () => {
     const run = jest.fn().mockResolvedValue({ runId: 'run-original-feed' });
     const patchSessionEntry = jest.fn().mockResolvedValue({});
     plugin.register({ registrationMode: 'full', config: {},
-      pluginConfig: { serverRouting: { eigenflux: { sessionKey, replyChannel: 'telegram', replyTo: '12345' } } },
+      pluginConfig: { serverRouting: { alicerealm: { sessionKey, replyChannel: 'telegram', replyTo: '12345' } } },
       runtime: { version, subagent: { run }, agent: { session: {
         resolveStorePath: () => '/missing/sessions.json',
         ...(sessionAPIs ? { listSessionEntries: () => [], patchSessionEntry } : {}),
@@ -394,7 +394,7 @@ describe('register integration', () => {
   });
 
   test('default Feed keeps the main-session delivery when no external reply route exists', async () => {
-    delete process.env.EIGENFLUX_FEED_DELIVERY;
+    delete process.env.ALICEREALM_FEED_DELIVERY;
     jest.resetModules();
     const { default: plugin } = await import('./index');
     const services: any[] = [];
@@ -411,7 +411,7 @@ describe('register integration', () => {
   });
 
   test('mode 2a (opt-in): injects feed into the main session via system event + heartbeat (no subagent)', async () => {
-    process.env.EIGENFLUX_FEED_DELIVERY = 'system-event';
+    process.env.ALICEREALM_FEED_DELIVERY = 'system-event';
     jest.resetModules();
     const { default: plugin } = await import('./index');
     const services: any[] = [];
@@ -438,12 +438,12 @@ describe('register integration', () => {
     await waitFor(() => enqueueSystemEvent.mock.calls.length === 1);
 
     const [message, opts] = enqueueSystemEvent.mock.calls[0];
-    expect(String(message)).toContain('[EIGENFLUX_FEED_PAYLOAD]');
+    expect(String(message)).toContain('[ALICEREALM_FEED_PAYLOAD]');
     expect(String(message)).toContain('OUTPUT CONTRACT');
     expect(String(message)).toContain('"item_id": "501"');
     // Injected into a persistent main session, NOT a throwaway one-shot key.
     expect(opts.sessionKey).toEqual(expect.any(String));
-    expect(opts.sessionKey).not.toMatch(/^eigenflux:feed:/);
+    expect(opts.sessionKey).not.toMatch(/^alicerealm:feed:/);
     expect(requestHeartbeatNow).toHaveBeenCalled();
     // The feed must NOT go through the deliver:true subagent path in 2a.
     expect(subagentRun).not.toHaveBeenCalled();
@@ -489,12 +489,12 @@ describe('register integration', () => {
 
     expect(subagentRun).toHaveBeenCalledTimes(1);
     const params = subagentRun.mock.calls[0][0];
-    expect(params.sessionKey).toMatch(/^eigenflux:pm:[a-f0-9]{16}:[a-f0-9]{16}:[a-f0-9]{16}$/);
+    expect(params.sessionKey).toMatch(/^alicerealm:pm:[a-f0-9]{16}:[a-f0-9]{16}:[a-f0-9]{16}$/);
     expect(params.sessionKey).not.toBe('agent:main:main');
-    expect(params.lane).toMatch(/^eigenflux-pm:[a-f0-9]{16}:[a-f0-9]{16}:[a-f0-9]{16}$/);
+    expect(params.lane).toMatch(/^alicerealm-pm:[a-f0-9]{16}:[a-f0-9]{16}:[a-f0-9]{16}$/);
     expect(params.message).toContain('"conv_id": "conv-341466745984253952"');
-    expect(params.message).toContain('ef-communication skill');
-    expect(params.message).not.toContain('eigenflux msg history');
+    expect(params.message).toContain('ar-communication skill');
+    expect(params.message).not.toContain('alicerealm msg history');
     expect(params.message).toContain('stable isolated session');
     expect(sessionEntries.get(params.sessionKey)?.delivery.context).toEqual({
       channel: 'feishu', to: 'user:integration',
@@ -588,10 +588,10 @@ describe('register integration', () => {
     await services[0].start();
     await waitFor(() => subagentRun.mock.calls.length === 1);
 
-    // Feed should be delivered to eigenflux:feed:eigenflux, not main
+    // Feed should be delivered to alicerealm:feed:alicerealm, not main
     const feedCall = subagentRun.mock.calls[0]?.[0];
-    expect(feedCall.sessionKey).toMatch(/^eigenflux:feed:eigenflux:\d+-[a-f0-9]{8}$/);
-    expect(feedCall.message).toContain('[EIGENFLUX_FEED_PAYLOAD]');
+    expect(feedCall.sessionKey).toMatch(/^alicerealm:feed:alicerealm:\d+-[a-f0-9]{8}$/);
+    expect(feedCall.message).toContain('[ALICEREALM_FEED_PAYLOAD]');
 
     await services[0].stop();
   });

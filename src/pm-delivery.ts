@@ -7,7 +7,7 @@ export type PmDeliveryBatch = {
   event: PmStreamEvent;
 };
 
-/** Split a stream frame so every EigenFlux conversation has its own ordering key. */
+/** Split a stream frame so every AliceRealm conversation has its own ordering key. */
 export function splitPmEventByConversation(event: PmStreamEvent): PmDeliveryBatch[] {
   const data = event.data ?? {};
   // Reconnect frames can carry a large history_messages backfill together with
@@ -65,7 +65,7 @@ export function buildPmSessionKey(
   peerKey: string,
   conversationKey: string
 ): string {
-  return `eigenflux:pm:${stableKey(serverName)}:${stableKey(peerKey)}:${stableKey(conversationKey)}`;
+  return `alicerealm:pm:${stableKey(serverName)}:${stableKey(peerKey)}:${stableKey(conversationKey)}`;
 }
 
 export function buildPmLane(
@@ -73,7 +73,7 @@ export function buildPmLane(
   peerKey: string,
   conversationKey: string
 ): string {
-  return `eigenflux-pm:${stableKey(serverName)}:${stableKey(peerKey)}:${stableKey(conversationKey)}`;
+  return `alicerealm-pm:${stableKey(serverName)}:${stableKey(peerKey)}:${stableKey(conversationKey)}`;
 }
 
 function resolveMessagePeerKey(

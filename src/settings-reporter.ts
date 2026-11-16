@@ -1,10 +1,10 @@
 /**
- * Agent-side settings reporter for EigenFlux.
+ * Agent-side settings reporter for AliceRealm.
  *
  * Pushes the agent's local runtime mode to the backend on every heartbeat by
- * delegating to the eigenflux CLI:
+ * delegating to the alicerealm CLI:
  *
- *   eigenflux settings push --mode <plugin|skill> -s <server>
+ *   alicerealm settings push --mode <plugin|skill> -s <server>
  *
  * The CLI owns identity persistence and compares its last successful report,
  * issuing a V1/V2 settings PUT when metadata changes or the daily report is due.
@@ -17,14 +17,14 @@
  * never propagates, so it cannot interrupt the heartbeat/poll loop.
  */
 
-import { execEigenflux } from './cli-executor';
+import { execAliceRealm } from './cli-executor';
 import { Logger } from './logger';
 
 export type AgentMode = 'plugin' | 'skill';
 
 export interface SettingsReporterConfig {
   serverName: string;
-  eigenfluxBin: string;
+  alicerealmBin: string;
   logger: Logger;
   /** Injectable mode resolver; the native polling service defaults to plugin. */
   resolveMode?: () => AgentMode | undefined;
@@ -39,11 +39,11 @@ export function resolveAgentMode(_env: NodeJS.ProcessEnv = process.env): AgentMo
 }
 
 /**
- * Triggers the eigenflux CLI to push the agent's settings to the backend.
+ * Triggers the alicerealm CLI to push the agent's settings to the backend.
  * Change-detection and dedup live in the CLI; this class just resolves the
  * runtime mode and spawns the command once per heartbeat, best-effort.
  */
-export class EigenFluxSettingsReporter {
+export class AliceRealmSettingsReporter {
   private readonly config: SettingsReporterConfig;
   private readonly resolveMode: () => AgentMode | undefined;
   private inFlight = false;
@@ -67,7 +67,7 @@ export class EigenFluxSettingsReporter {
   }
 
   /**
-   * Invoke `eigenflux settings push` for the configured server. Returns true if
+   * Invoke `alicerealm settings push` for the configured server. Returns true if
    * the CLI ran successfully, false if it was skipped (in flight) or failed.
    * Never throws.
    */
@@ -93,10 +93,10 @@ export class EigenFluxSettingsReporter {
 
       if (this.observedModel) args.push('--model', this.observedModel);
 
-      const result = await execEigenflux<string>(this.config.eigenfluxBin, args, {
+      const result = await execAliceRealm<string>(this.config.alicerealmBin, args, {
         logger: this.config.logger,
         parseJson: false,
-        env: { EIGENFLUX_MODEL: undefined },
+        env: { ALICEREALM_MODEL: undefined },
       });
 
       if (result.kind === 'success') {
@@ -112,7 +112,7 @@ export class EigenFluxSettingsReporter {
         return false;
       }
       if (result.kind === 'not_installed') {
-        this.config.logger.warn(`Settings push: eigenflux CLI not installed (bin=${result.bin})`);
+        this.config.logger.warn(`Settings push: alicerealm CLI not installed (bin=${result.bin})`);
         return false;
       }
       // kind === 'error'
